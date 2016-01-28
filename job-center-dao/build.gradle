@@ -1,0 +1,4 @@
+dependencies {
+    compile group: 'org.mybatis', name: 'mybatis', version:'3.3.0'
+    compile project(':job-center-domain')
+}

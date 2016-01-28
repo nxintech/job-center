@@ -1,0 +1,4 @@
+dependencies {
+    compile project(':job-center-core')
+    compile group: 'com.lmax', name: 'disruptor', version: '3.3.4'
+}

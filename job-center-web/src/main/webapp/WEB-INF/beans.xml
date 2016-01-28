@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p" xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+    <context:property-placeholder location="WEB-INF/config.properties"/>
+    <bean id="serviceRegister" class="com.nxin.framework.core.ZkServiceRegister" init-method="startUp" destroy-method="shutDown" p:namespace="job-center" p:servers="${dubbo.address}"/>
+    <bean id="codec" class="com.nxin.codec.KryoCodec" init-method="startUp">
+        <property name="clss">
+            <list value-type="java.lang.String">
+                <value>com.nxin.framework.message.JobResponse</value>
+            </list>
+        </property>
+    </bean>
+    <bean class="com.nxin.framework.client.RpcJobWorker" init-method="startUp" destroy-method="shutDown">
+        <property name="jobWorker">
+            <bean class="com.nxin.framework.client.JobWorker" init-method="startUp" destroy-method="shutDown" p:bufferSize="4" p:serviceRegister-ref="serviceRegister" p:port="${rpc.port}">
+                <property name="waitStrategy">
+                    <bean class="com.lmax.disruptor.BlockingWaitStrategy"/>
+                </property>
+                <property name="rpcHelper">
+                    <bean class="com.nxin.framework.core.JobMessageRpcHelper" init-method="startUp" destroy-method="shutDown" p:codec-ref="codec"/>
+                </property>
+                <property name="handlerMap">
+                    <map key-type="java.lang.String" value-type="com.nxin.framework.client.IJob">
+                        <entry key="helloJob">
+                            <bean class="com.nxin.ferameowrk.web.core.HelloJob"/>
+                        </entry>
+                    </map>
+                </property>
+            </bean>
+        </property>
+    </bean>
+</beans>

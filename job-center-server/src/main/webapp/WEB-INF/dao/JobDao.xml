@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.nxin.framework.dao.IJobDao">
+    <insert id="addJob" parameterType="JobConfiguration">
+        INSERT INTO nx_job_configuration (id, name, expression, consumerType, callbackUrl, needSharding, shardingTotal, createTime, updateTime, extra, description) VALUES (UUID(), #{configuration.name}, #{configuration.expression}, #{configuration.consumerType}, #{configuration.callbackUrl}, #{configuration.needSharding}, #{configuration.shardingTotal}, NOW(), NOW(), #{configuration.extra}, #{configuration.description});
+    </insert>
+    <select id="getAllJobs" resultType="JobConfiguration">
+        SELECT id,name,expression,consumerType,callbackUrl,needSharding,shardingTotal,description,createTime,updateTime,extra FROM nx_job_configuration;
+    </select>
+    <select id="jobNameExist" parameterType="string" resultType="boolean">
+        SELECT EXISTS(SELECT id FROM nx_job_configuration WHERE name = #{name});
+    </select>
+    <select id="getJob" parameterType="string" resultType="JobConfiguration">
+        SELECT id,name,expression,consumerType,callbackUrl,needSharding,shardingTotal,description,createTime,updateTime,extra FROM nx_job_configuration WHERE id = #{id};
+    </select>
+    <select id="getJobByName" parameterType="string" resultType="JobConfiguration">
+        SELECT id,name,expression,consumerType,callbackUrl,needSharding,shardingTotal,description,createTime,updateTime,extra FROM nx_job_configuration WHERE name = #{name};
+    </select>
+    <update id="updateJob" parameterType="JobConfiguration">
+        UPDATE nx_job_configuration SET expression = #{configuration.expression}, consumerType = #{configuration.consumerType}, callbackUrl = #{configuration.callbackUrl}, needSharding = #{configuration.needSharding}, shardingTotal = #{configuration.shardingTotal}, updateTime = NOW(), description = #{configuration.description}, extra = #{configuration.extra} WHERE id = #{configuration.id};
+    </update>
+    <delete id="deleteJob" parameterType="string">
+        DELETE FROM nx_job_instance_item WHERE instanceId IN (SELECT id FROM nx_job_instance WHERE jobId = #{id});
+        DELETE FROM nx_job_instance WHERE jobId = #{id};
+        DELETE FROM nx_job_configuration WHERE id = #{id};
+    </delete>
+    <delete id="deleteJobByName" parameterType="string">
+        SELECT id INTO @id FROM nx_job_configuration WHERE name = #{name};
+        DELETE FROM nx_job_instance_item WHERE instanceId = (SELECT id FROM nx_job_instance WHERE jobId = @id);
+        DELETE FROM nx_job_instance WHERE jobId = @id;
+        DELETE FROM nx_job_configuration WHERE id = @id;
+    </delete>
+    <select id="getJobByPage" resultType="JobConfiguration">
+        SELECT id,name,expression,consumerType,callbackUrl,needSharding,shardingTotal,extra,description FROM nx_job_configuration
+        <where>
+            <if test="name != null and name !=''">
+                INSTR(name,#{name})
+            </if>
+        </where>
+        LIMIT #{currentIndex},#{pageSize};
+    </select>
+    <select id="getJobCount" resultType="int">
+        SELECT COUNT(1) FROM nx_job_configuration
+        <where>
+            <if test="name != null and name !=''">
+                INSTR(name,#{name})
+            </if>
+        </where>
+    </select>
+    <delete id="deleteJobs">
+        DELETE FROM nx_job_instance_item WHERE instanceId IN (SELECT id FROM nx_job_instance WHERE jobId IN
+        <foreach collection="ids" item="it" open="(" close=")" separator=",">
+            #{it}
+        </foreach>);
+        DELETE FROM nx_job_instance WHERE jobId IN
+        <foreach collection="ids" item="it" open="(" close=")" separator=",">
+            #{it}
+        </foreach>;
+        DELETE FROM nx_job_configuration WHERE id IN
+        <foreach collection="ids" item="it" open="(" close=")" separator=",">
+            #{it}
+        </foreach>;
+    </delete>
+    <select id="getJobByIdList" resultType="JobConfiguration">
+        SELECT id,name,expression,consumerType,callbackUrl,needSharding,shardingTotal,description,createTime,updateTime,extra FROM nx_job_configuration WHERE id IN
+        <foreach collection="ids" item="it" open="(" close=")" separator=",">
+            #{it}
+        </foreach>;
+    </select>
+</mapper>

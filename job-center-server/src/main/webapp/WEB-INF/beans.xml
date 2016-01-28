@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <import resource="dataSource.xml"/>
+    <bean id="serviceRegister" class="com.nxin.framework.core.ZkServiceRegister" init-method="startUp" destroy-method="shutDown" p:namespace="job-center" p:servers="${dubbo.address}"/>
+    <bean id="jobManager" class="com.nxin.framework.core.JobManager" init-method="startUp" destroy-method="shutDown" p:jobRepository-ref="jobRepository"/>
+    <bean id="codec" class="com.nxin.codec.KryoCodec" init-method="startUp">
+        <property name="clss">
+            <list value-type="java.lang.String">
+                <value>com.nxin.framework.domain.JobConfiguration</value>
+                <value>com.nxin.framework.message.JobResponse</value>
+            </list>
+        </property>
+    </bean>
+    <bean id="jobController" class="com.nxin.framework.core.JobController" init-method="startUp" destroy-method="shutDown" p:port="${rpc.port}" p:jobManager-ref="jobManager" p:jobRepository-ref="jobRepository" p:serviceRegister-ref="serviceRegister">
+        <property name="rpcHelper">
+            <bean class="com.nxin.framework.core.JobMessageRpcHelper" init-method="startUp" destroy-method="shutDown" p:codec-ref="codec"/>
+        </property>
+    </bean>
+    <bean class="com.nxin.framework.core.RpcJobServer" init-method="startUp" destroy-method="shutDown" p:codec-ref="codec" p:port="${rpc.port}">
+        <property name="handlerMap">
+            <map key-type="java.lang.Integer" value-type="com.nxin.framework.core.IJobMessageHandler">
+                <entry key="1">
+                    <bean class="com.nxin.framework.handlers.JobResponseHandler" p:jobRepository-ref="jobRepository"/>
+                </entry>
+                <entry key="2">
+                    <bean class="com.nxin.framework.handlers.AddJobHandler" p:jobManager-ref="jobManager"/>
+                </entry>
+                <entry key="3">
+                    <bean class="com.nxin.framework.handlers.UpdateJobHandler" p:jobManager-ref="jobManager"/>
+                </entry>
+                <entry key="4">
+                    <bean class="com.nxin.framework.handlers.DeleteJobHandler" p:jobManager-ref="jobManager"/>
+                </entry>
+                <entry key="5">
+                    <bean class="com.nxin.framework.handlers.DeleteJobListHandler" p:jobManager-ref="jobManager"/>
+                </entry>
+            </map>
+        </property>
+    </bean>
+    <bean id="requestHelper" class="com.nxin.framework.core.RequestHelper">
+        <constructor-arg name="connectionManager">
+            <bean class="org.apache.http.impl.conn.PoolingHttpClientConnectionManager" p:defaultMaxPerRoute="20" p:maxTotal="200"/>
+        </constructor-arg>
+    </bean>
+    <bean id="jobShardingStrategy" class="com.nxin.framework.sharing.SequenceAllocationJobShardingStrategy"/>
+    <bean id="rpcHelper" class="com.nxin.framework.core.JobRequestRpcHelper" init-method="startUp" destroy-method="shutDown"/>
+    <bean id="redisManager" class="com.nxin.cache.RedisManager">
+        <property name="pool">
+            <bean class="redis.clients.jedis.JedisPool">
+                <constructor-arg name="poolConfig">
+                    <bean class="redis.clients.jedis.JedisPoolConfig" p:maxIdle="6" p:maxWaitMillis="100000"/>
+                </constructor-arg>
+                <constructor-arg name="host" value="${redis.host}"/>
+                <constructor-arg name="port" value="${redis.port}"/>
+                <constructor-arg name="timeout" value="2000"/>
+                <constructor-arg name="password"><null/></constructor-arg>
+                <constructor-arg name="database" value="${redis.database}"/>
+                <constructor-arg name="clientName"><null/></constructor-arg>
+            </bean>
+        </property>
+        <property name="resourceLoader">
+            <bean class="com.nxin.loader.ServletResourceLoader" init-method="init" p:root="/scripts/"/>
+        </property>
+    </bean>
+</beans>

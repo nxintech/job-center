@@ -1,0 +1,5 @@
+dependencies {
+    compile group: 'com.nxin', name: 'nxin-common', version: "$nxinCommonVersion"
+    compile group: 'org.apache.curator', name: 'curator-recipes', version: "$curatorVersion"
+    compile group: 'com.google.guava', name: 'guava', version: "$guavaVersion"
+}
