@@ -1,0 +1,4 @@
+dependencies {
+    compile group: 'com.nxin', name: 'nxin-common', version: "$nxinCommonVersion"
+    compile project(':job-center-dao')
+}

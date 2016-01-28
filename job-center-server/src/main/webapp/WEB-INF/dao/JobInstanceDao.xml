@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.nxin.framework.dao.IJobInstanceDao">
+    <insert id="newInstance">
+        SET @id=UUID();
+        INSERT INTO nx_job_instance(id, jobId, createTime) VALUES (@id,#{jobId},NOW());
+        <foreach collection="items" item="it">
+            INSERT INTO nx_job_instance_item (id, instanceId, shardingItems, status) VALUES (#{it.id}, @id, #{it.shardingItems}, 0);
+        </foreach>
+    </insert>
+    <update id="updateItem">
+        UPDATE nx_job_instance_item SET status = #{status}
+        <if test="error != null and error != ''">
+            ,error = #{error}
+        </if>
+        WHERE id = #{id};
+    </update>
+    <select id="getJobInstanceByPage" resultType="JobInstanceInfo">
+        SELECT nji.id,njc.name AS jobName,njc.id AS jobId,nji.createTime AS execTime FROM nx_job_instance nji LEFT JOIN nx_job_configuration njc ON nji.jobId = njc.id
+        <where>
+            <if test="name != null and name != ''">
+                INSTR(njc.name,#{name}) > 0
+            </if>
+        </where>
+        ORDER BY nji.createTime DESC LIMIT #{currentIndex},#{pageSize};
+    </select>
+    <select id="getJobInstanceItems" resultType="JobInstanceItem">
+        SELECT id,instanceId,shardingItems,status,error FROM nx_job_instance_item WHERE instanceId IN
+        <foreach collection="ids" open="(" close=")" separator="," item="it">
+            #{it}
+        </foreach>;
+    </select>
+    <select id="getInstanceCount" resultType="int" parameterType="string">
+        SELECT COUNT(1) FROM nx_job_instance nji LEFT JOIN nx_job_configuration njc ON nji.jobId = njc.id
+        <where>
+            <if test="name != null and name != ''">
+                INSTR(njc.name,#{name}) > 0
+            </if>
+        </where>
+    </select>
+</mapper>

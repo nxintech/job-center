@@ -1,0 +1,9 @@
+rootProject.name = 'job-center'
+include 'job-center-server'
+include 'job-center-core'
+include 'job-center-domain'
+include 'job-center-dao'
+include 'job-center-manager'
+include 'job-center-client'
+include 'job-center-web'
+

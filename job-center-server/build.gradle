@@ -1,0 +1,33 @@
+apply plugin: 'war'
+apply plugin: 'jetty'
+
+dependencies {
+    compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.37'
+    compile group: 'com.alibaba', name: 'druid', version: "1.0.16"
+    compile group: 'org.mybatis', name: 'mybatis-spring', version:'1.2.3'
+    compile group: 'org.quartz-scheduler', name: 'quartz', version: '2.2.2'
+    compile group: 'org.aspectj', name: 'aspectjweaver', version:'1.8.7'
+    compile group: 'org.springframework', name: 'spring-webmvc', version:"$springVersion"
+    compile group: 'org.springframework', name: 'spring-oxm', version:"$springVersion"
+    providedCompile group: 'javax.servlet', name: 'javax.servlet-api', version:'3.1.0'
+    compile project(':job-center-manager')
+    compile project(':job-center-core')
+}
+
+task dev <<{
+    exec{
+        workingDir = "../src/frontend"
+        commandLine = ["/usr/bin/gulp", "dev"]
+    }
+}
+
+task prod <<{
+    exec{
+        workingDir = "../src/frontend"
+        commandLine = ["/usr/bin/gulp", "prod"]
+    }
+}
+
+httpPort = 8080
+stopPort = 9451
+stopKey = 'foo'
