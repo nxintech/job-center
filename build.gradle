@@ -19,7 +19,6 @@ subprojects{
     repositories {
         mavenLocal()
         jcenter()
-        maven { url "http://172.16.200.111:8081/nexus/content/groups/public/" }
     }
     dependencies {
         compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: "$log4jVersion"
