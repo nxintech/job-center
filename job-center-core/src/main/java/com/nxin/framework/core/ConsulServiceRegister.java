@@ -7,9 +7,10 @@ import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.agent.model.NewService;
 import com.ecwid.consul.v1.catalog.model.CatalogService;
 import com.google.common.util.concurrent.AbstractIdleService;
-import com.nxin.collection.ListAdapter;
-import com.nxin.domain.Tuple2;
-import com.nxin.functions.*;
+import com.gs.collections.api.block.function.Function;
+import com.gs.collections.impl.list.mutable.ListAdapter;
+import com.nxin.framework.domain.Tuple2;
+import com.nxin.framework.functions.*;
 import java.util.List;
 import java.util.Set;
 
@@ -109,14 +110,14 @@ public class ConsulServiceRegister extends AbstractIdleService implements IServi
     public List<Tuple2<String, Integer>> findJobWorkers(String name)
     {
         Response<List<CatalogService>> resp = consul.getCatalogService(name, new QueryParams(ConsistencyMode.DEFAULT));
-        return ListAdapter.transform(new Func1<CatalogService, Tuple2<String, Integer>>()
+        return ListAdapter.adapt(resp.getValue()).collect(new Function<CatalogService, Tuple2<String, Integer>>()
         {
             @Override
-            public Tuple2<String, Integer> call(CatalogService catalogService)
+            public Tuple2<String, Integer> valueOf(CatalogService catalogService)
             {
-                return new Tuple2<String, Integer>(catalogService.getAddress(),catalogService.getServicePort());
+                return new Tuple2<String, Integer>(catalogService.getAddress(), catalogService.getServicePort());
             }
-        }, resp.getValue());
+        });
     }
 
     @Override

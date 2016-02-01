@@ -1,10 +1,13 @@
 package com.nxin.framework.core;
 
-import com.google.common.base.Charsets;
+import com.google.common.base.*;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.AbstractIdleService;
-import com.nxin.collection.ListAdapter;
-import com.nxin.domain.Tuple2;
-import com.nxin.functions.*;
+import com.gs.collections.api.block.function.Function2;
+import com.gs.collections.impl.list.mutable.ListAdapter;
+import com.nxin.framework.domain.Tuple2;
+import com.nxin.framework.functions.*;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.state.ConnectionState;
@@ -208,14 +211,14 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     public List<Tuple2<String, Integer>> findJobServers()
     {
         List<Tuple2<String,String>> ls = getChildAndData("jobServers","/");
-        return ListAdapter.transform(new Func1<Tuple2<String, String>, Tuple2<String, Integer>>()
+        return Lists.transform(ls, new Function<Tuple2<String, String>, Tuple2<String, Integer>>()
         {
             @Override
-            public Tuple2<String, Integer> call(Tuple2<String, String> tup)
+            public Tuple2<String, Integer> apply(Tuple2<String, String> tup)
             {
-                return new Tuple2<String, Integer>(tup.getT1(), Integer.parseInt(tup.getT2()));
+                return new Tuple2<String, Integer>(tup.getT1(),Integer.parseInt(tup.getT2()));
             }
-        }, ls);
+        });
     }
 
     private List<Tuple2<String,String>> getChildAndData(String nameSpace,final String path)
@@ -229,23 +232,23 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
                 return new ArrayList<Tuple2<String,String>>();
             }
             List<String> children = curator.getChildren().forPath(pth);
-            return ListAdapter.transformWith(new Func2<String, CuratorFramework, Tuple2<String, String>>()
+            return ListAdapter.adapt(children).collectWith(new Function2<String, CuratorFramework, Tuple2<String, String>>()
             {
                 @Override
-                public Tuple2<String, String> call(String s, CuratorFramework curatorFramework)
+                public Tuple2<String, String> value(String s, CuratorFramework curatorFramework)
                 {
-                    String p = ZKPaths.makePath(path,s);
+                    String p = ZKPaths.makePath(path, s);
                     try
                     {
-                        String data = new String(curatorFramework.getData().forPath(p),Charsets.UTF_8);
-                        return new Tuple2<String, String>(s,data);
+                        String data = new String(curatorFramework.getData().forPath(p), Charsets.UTF_8);
+                        return new Tuple2<String, String>(s, data);
                     } catch (Exception e)
                     {
-                        logger.error(String.format("读取节点【%s】信息失败",p,s),e);
-                        throw new RuntimeException(String.format("读取节点【%s】信息失败",p,s),e);
+                        logger.error(String.format("读取节点【%s】信息失败", p, s), e);
+                        throw new RuntimeException(String.format("读取节点【%s】信息失败", p, s), e);
                     }
                 }
-            }, children, curator);
+            }, curator);
         } catch (Exception e)
         {
             logger.error(String.format("获取节点【/%s/%s】子节点失败",nameSpace,path),e);
@@ -257,14 +260,14 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     public List<Tuple2<String, Integer>> findJobWorkers(String name)
     {
         List<Tuple2<String,String>> ls = getChildAndData("jobWorkers",name);
-        return ListAdapter.transform(new Func1<Tuple2<String, String>, Tuple2<String, Integer>>()
+        return ListAdapter.adapt(ls).collect(new com.gs.collections.api.block.function.Function<Tuple2<String, String>, Tuple2<String, Integer>>()
         {
             @Override
-            public Tuple2<String, Integer> call(Tuple2<String, String> tup)
+            public Tuple2<String, Integer> valueOf(Tuple2<String, String> tup)
             {
                 return new Tuple2<String, Integer>(tup.getT1(), Integer.parseInt(tup.getT2()));
             }
-        }, ls);
+        });
     }
 
     @Override

@@ -32,11 +32,12 @@ public class HomeController extends BaseController
     private IJobRepository jobRepository;
     @Autowired
     private JobController jobController;
-    private Pattern urlPattern = Pattern.compile("https?://%s(:%d)?/[a-zA-Z0-9/]+");
+    private Pattern urlPattern = Pattern.compile("[a-zA-Z0-9]+(/[a-zA-Z0-9]+)*");
     @ResponseBody
     @RequestMapping(value = "/addJob",method = RequestMethod.POST)
     public ActionResult<Boolean> addJob(String job)
     {
+        logger.info("添加任务:{}",job);
         JobConfiguration configuration = JSON.parseObject(job,JobConfiguration.class);
         if(Strings.isNullOrEmpty(configuration.getName()))
         {
@@ -46,7 +47,7 @@ public class HomeController extends BaseController
         {
             return fail(1000002);
         }
-        if (configuration.getConsumerType() == ConsumerType.HTTP.ordinal())
+        if (configuration.getConsumerType() != ConsumerType.TCP.ordinal())
         {
             if(Strings.isNullOrEmpty(configuration.getCallbackUrl()))
             {
@@ -94,6 +95,7 @@ public class HomeController extends BaseController
     @RequestMapping(value = "/updateJob",method = RequestMethod.POST)
     public ActionResult<Boolean> updateJob(String job)
     {
+        logger.info("收到任务更请求:{}",job);
         JobConfiguration configuration = JSON.parseObject(job,JobConfiguration.class);
         if(Strings.isNullOrEmpty(configuration.getId()))
         {
@@ -103,7 +105,7 @@ public class HomeController extends BaseController
         {
             return fail(1000002);
         }
-        if (configuration.getConsumerType() == ConsumerType.HTTP.ordinal())
+        if (configuration.getConsumerType() != ConsumerType.TCP.ordinal())
         {
             if(Strings.isNullOrEmpty(configuration.getCallbackUrl()))
             {
@@ -135,6 +137,7 @@ public class HomeController extends BaseController
     {
         try
         {
+            logger.info("删除任务:{}",name);
             jobController.deleteJob(name);
             return ActionResult.New(true);
         }
@@ -150,8 +153,9 @@ public class HomeController extends BaseController
     {
         try
         {
+            logger.info("请求删除任务:{}",ids);
             List<String> idl = Splitter.on(",").splitToList(ids);
-            jobRepository.deleteJobs(idl);
+            jobController.deleteJobs(idl);
             return ActionResult.New(true);
         }
         catch (Exception e)
@@ -195,6 +199,7 @@ public class HomeController extends BaseController
     {
         try
         {
+            logger.info("收到任务状态汇报【id:{}   state:{}   error:{}】",id,state,error);
             jobRepository.updateItem(id,state,error);
             return ActionResult.New(true);
         }

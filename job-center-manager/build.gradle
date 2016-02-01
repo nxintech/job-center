@@ -1,4 +1,5 @@
 dependencies {
-    compile group: 'com.nxin', name: 'nxin-common', version: "$nxinCommonVersion"
     compile project(':job-center-dao')
+    compile group: 'com.google.guava', name: 'guava', version: "$guavaVersion"
+    compile group: 'com.goldmansachs', name: 'gs-collections', version: "$gsCollectionVersion"
 }

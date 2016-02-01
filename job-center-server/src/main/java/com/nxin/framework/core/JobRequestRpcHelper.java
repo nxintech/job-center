@@ -1,6 +1,6 @@
 package com.nxin.framework.core;
 
-import com.nxin.framework.codec.JobRequestEncoder;
+import com.nxin.framework.encoder.JobRequestEncoder;
 
 /**
  * Created by petzold on 2016/1/22.

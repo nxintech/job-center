@@ -1,7 +1,8 @@
 package com.nxin.framework.core;
 
-import com.nxin.domain.Tuple2;
-import com.nxin.functions.*;
+import com.nxin.framework.domain.Tuple2;
+import com.nxin.framework.functions.*;
+
 import java.util.List;
 import java.util.Set;
 

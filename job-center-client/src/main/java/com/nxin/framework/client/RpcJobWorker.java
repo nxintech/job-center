@@ -1,6 +1,6 @@
 package com.nxin.framework.client;
 
-import com.nxin.framework.codec.JobRequestDecoder;
+import com.nxin.framework.decoder.JobRequestDecoder;
 import com.nxin.framework.core.JobAgent;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.timeout.IdleStateHandler;

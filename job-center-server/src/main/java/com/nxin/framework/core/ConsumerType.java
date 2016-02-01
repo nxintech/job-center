@@ -6,5 +6,6 @@ package com.nxin.framework.core;
 public enum ConsumerType
 {
     TCP,
-    HTTP
+    HTTP,
+    HTTPS
 }

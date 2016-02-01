@@ -2,19 +2,18 @@ package com.nxin.framework.core;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.AbstractIdleService;
-import com.nxin.collection.ListAdapter;
-import com.nxin.domain.Tuple2;
+import com.gs.collections.impl.list.mutable.ListAdapter;
 import com.nxin.framework.domain.JobConfiguration;
 import com.nxin.framework.domain.JobInstanceItem;
+import com.nxin.framework.domain.Tuple2;
+import com.nxin.framework.functions.Action3;
 import com.nxin.framework.manager.IJobRepository;
 import com.nxin.framework.message.JobMessage;
-import com.nxin.functions.Action3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -108,7 +107,7 @@ public class JobController extends AbstractIdleService implements ApplicationCon
     public void deleteJobs(List<String> ids)
     {
         List<JobConfiguration> configurations = jobRepository.getJobByIdList(ids);
-        List<String> names = ListAdapter.transform(JobConfiguration::getName ,configurations);
+        List<String> names = Lists.transform(configurations,JobConfiguration::getName);
         jobRepository.deleteJobs(ids);
         JobMessage message = new JobMessage();
         message.setType(5);
@@ -128,7 +127,8 @@ public class JobController extends AbstractIdleService implements ApplicationCon
     }
     private List<Tuple2<String,Integer>> getOtherServers()
     {
-        return ListAdapter.rejectWith((Tuple2<String, Integer> tup,String ip) -> tup.getT1().equals(ip) ,serviceRegister.findJobServers(),ip);
+        List<Tuple2<String,Integer>> svs = serviceRegister.findJobServers();
+        return ListAdapter.adapt(svs).rejectWith((tup, i) -> tup.getT1().equals(i), ip);
     }
     public void newJobInstance(String jobId, List<JobInstanceItem> items)
     {

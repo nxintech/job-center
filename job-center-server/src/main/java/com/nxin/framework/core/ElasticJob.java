@@ -2,10 +2,9 @@ package com.nxin.framework.core;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.nxin.cache.RedisManager;
-import com.nxin.collection.ListAdapter;
-import com.nxin.domain.Tuple2;
+import com.gs.collections.impl.list.mutable.ListAdapter;
 import com.nxin.framework.domain.JobInstanceItem;
+import com.nxin.framework.domain.Tuple2;
 import com.nxin.framework.message.JobRequest;
 import com.nxin.framework.sharing.IJobShardingStrategy;
 import org.quartz.Job;
@@ -14,7 +13,6 @@ import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.*;
 
 /**
@@ -44,27 +42,26 @@ public class ElasticJob implements Job
             List<Tuple2<String,Integer>> workers = serviceRegister.findJobWorkers(name);
             if(workers == null || workers.isEmpty())
             {
-                logger.error("末有发现执行任务【{}】的机器", name);
+                logger.error("没有发现执行任务【{}】的机器", name);
                 return;
             }
             if(needSharing)
             {
                 int shardingTotal = dataMap.getInt("shardingTotal");
-                Map<String,List<Integer>> map = jobShardingStrategy.sharding(ListAdapter.transform(tup -> tup.getT1(),workers), shardingTotal);
+                Map<String,List<Integer>> map = jobShardingStrategy.sharding(ListAdapter.adapt(workers).collect(tup -> tup.getT1()), shardingTotal);
                 List<JobInstanceItem> items = new ArrayList<JobInstanceItem>(map.size());
-                boolean isCallback = consumerType == ConsumerType.HTTP.ordinal();
+                boolean isCallback = consumerType != ConsumerType.TCP.ordinal();
                 String callback = dataMap.getString("callbackUrl");
                 for (Map.Entry<String,List<Integer>> entry : map.entrySet())
                 {
-
-                    Tuple2<String, Integer> tup = ListAdapter.detectWith((tp,ip) -> tp.getT1().equals(ip),workers,entry.getKey());
+                    Tuple2<String, Integer> tup = ListAdapter.adapt(workers).detectWith((tp,ip)->tp.getT1().equals(ip),entry.getKey());
                     JobInstanceItem item = new JobInstanceItem();
                     item.setId(UUID.randomUUID().toString());
                     item.setShardingItems(Joiner.on(",").join(entry.getValue()));
                     items.add(item);
                     if(isCallback)
                     {
-                        String url = String.format(callback, tup.getT1(), tup.getT2());
+                        String url = (consumerType == ConsumerType.HTTP.ordinal() ? "http" : "https") + "://" + tup.getT1() + (tup.getT2() == 80 ? "" : ":" + tup.getT2()) + "/" + callback;
                         Map<String,String> parameter = new HashMap<String, String>();
                         parameter.put("id", item.getId());
                         parameter.put("name", name);
@@ -97,7 +94,7 @@ public class ElasticJob implements Job
                 else
                 {
                     String callback = dataMap.getString("callbackUrl");
-                    String url = String.format(callback, tup.getT1(), tup.getT2());
+                    String url = (consumerType == ConsumerType.HTTP.ordinal() ? "http" : "https") + "://" + tup.getT1() + (tup.getT2() == 80 ? "" : ":" + tup.getT2()) + "/" + callback;
                     Map<String,String> map = new HashMap<String, String>();
                     map.put("id",item.getId());
                     map.put("name",name);
