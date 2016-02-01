@@ -1,19 +1,16 @@
 package com.nxin.framework.core;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.google.common.base.Charsets;
-import com.nxin.collection.MapAdapter;
-import com.nxin.functions.Func2;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.entity.EntityBuilder;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
@@ -21,9 +18,10 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.File;
+
 import java.io.IOException;
-import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -81,71 +79,16 @@ public class RequestHelper
     }
     public String req(String url,String data)
     {
-        HttpEntity entity = EntityBuilder.create().setContentEncoding("UTF-8").setText(data).build();
-        return req(url,entity);
+        return req(url, new StringEntity(data,Charsets.UTF_8));
     }
     public String req(String url,byte[] data)
     {
-        HttpEntity httpEntity = EntityBuilder.create().setBinary(data).build();
-        return req(url,httpEntity);
-    }
-    public String req(String url,InputStream stream)
-    {
-        HttpEntity httpEntity = EntityBuilder.create().setStream(stream).build();
-        return req(url,httpEntity);
-    }
-    public String req(String url,File file)
-    {
-        HttpEntity httpEntity = EntityBuilder.create().setFile(file).build();
-        return req(url,httpEntity);
+        return req(url, new ByteArrayEntity(data));
     }
     public String req(String url,Map<String,String> parameter)
     {
-        EntityBuilder entityBuilder = EntityBuilder.create().setContentEncoding("UTF-8");
-        entityBuilder.setParameters(MapAdapter.transform(new Func2<String, String, NameValuePair>()
-        {
-            @Override
-            public NameValuePair call(String key, String val)
-            {
-                return new BasicNameValuePair(key, val);
-            }
-        }, parameter));
-        HttpEntity httpEntity = entityBuilder.build();
-        return req(url,httpEntity);
-    }
-    public JSONObject reqJSON(String url)
-    {
-        String data = req(url);
-        return JSON.parseObject(data);
-    }
-    public JSONObject reqJSON(String url,HttpEntity entity)
-    {
-        String data = req(url, entity);
-        return JSON.parseObject(data);
-    }
-    public JSONObject reqJSON(String url,String data)
-    {
-        String ret = req(url,data);
-        return JSON.parseObject(ret);
-    }
-    public JSONObject reqJSON(String url,byte[] data)
-    {
-        String ret = req(url,data);
-        return JSON.parseObject(ret);
-    }
-    public JSONObject reqJSON(String url,InputStream stream)
-    {
-        String data = req(url,stream);
-        return JSON.parseObject(data);
-    }
-    public JSONObject reqJSON(String url,File file)
-    {
-        String data = req(url,file);
-        return JSON.parseObject(data);
-    }
-    public JSONObject reqJSON(String url,Map<String,String> parameter)
-    {
-        String data = req(url,parameter);
-        return JSON.parseObject(data);
+        List<NameValuePair> pairs = new ArrayList<NameValuePair>(parameter.size());
+        parameter.forEach((k, v) -> pairs.add(new BasicNameValuePair(k, v)));
+        return req(url, new UrlEncodedFormEntity(pairs,Charsets.UTF_8));
     }
 }

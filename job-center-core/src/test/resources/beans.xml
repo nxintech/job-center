@@ -7,7 +7,7 @@
        <bean id="bar" class="com.nxin.framework.core.Bar" p:name="aa"/>
        <bean id="rpcHelper" class="com.nxin.framework.core.RpcHelper" init-method="startUp" destroy-method="shutDown">
               <property name="encoder">
-                     <bean class="com.nxin.framework.codec.JobRequestEncoder"/>
+                     <bean class="com.nxin.framework.encoder.JobRequestEncoder"/>
               </property>
        </bean>
 </beans>

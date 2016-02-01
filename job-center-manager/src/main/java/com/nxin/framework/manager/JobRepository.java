@@ -2,14 +2,12 @@ package com.nxin.framework.manager;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.nxin.collection.ListAdapter;
+import com.gs.collections.api.block.predicate.Predicate2;
+import com.gs.collections.impl.list.mutable.ListAdapter;
 import com.nxin.framework.dao.IErrorDao;
 import com.nxin.framework.dao.IJobDao;
 import com.nxin.framework.dao.IJobInstanceDao;
 import com.nxin.framework.domain.*;
-import com.nxin.functions.Action2;
-import com.nxin.functions.Predicate2;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
@@ -123,22 +121,17 @@ public class JobRepository implements IJobRepository
         if(infos.size() > 0)
         {
             List<JobInstanceItem> items = jobInstanceDao.getJobInstanceItems(ids);
-            ListAdapter.forEachWith(new Action2<JobInstanceInfo, List<JobInstanceItem>>()
+            for (JobInstanceInfo info : infos)
             {
-                @Override
-                public void call(JobInstanceInfo info, List<JobInstanceItem> items)
+                info.setItems(ListAdapter.adapt(items).selectWith(new Predicate2<JobInstanceItem, String>()
                 {
-                    List<JobInstanceItem> il = ListAdapter.selectWith(new Predicate2<JobInstanceItem, String>()
+                    @Override
+                    public boolean accept(JobInstanceItem item, String id)
                     {
-                        @Override
-                        public boolean accept(JobInstanceItem jobInstanceItem, String id)
-                        {
-                            return jobInstanceItem.getInstanceId().equals(id);
-                        }
-                    }, items, info.getId());
-                    info.setItems(il);
-                }
-            }, infos, items);
+                        return item.getInstanceId().equals(id);
+                    }
+                }, info.getId()));
+            }
         }
         return PageResult.New(infos,count);
     }

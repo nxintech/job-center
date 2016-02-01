@@ -1,7 +1,7 @@
 package com.nxin.framework.core;
 
-import com.nxin.codec.ICodec;
-import com.nxin.framework.codec.JobMessageEncoder;
+import com.nxin.framework.codec.ICodec;
+import com.nxin.framework.encoder.JobMessageEncoder;
 
 /**
  * Created by petzold on 2016/1/22.

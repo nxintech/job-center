@@ -1,7 +1,7 @@
 package com.nxin.framework.core;
 
-import com.nxin.codec.ICodec;
-import com.nxin.framework.codec.JobMessageDecoder;
+import com.nxin.framework.codec.ICodec;
+import com.nxin.framework.decoder.JobMessageDecoder;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.timeout.IdleStateHandler;
 import java.util.Map;
