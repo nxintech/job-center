@@ -5,7 +5,7 @@
     <import resource="dataSource.xml"/>
     <bean id="serviceRegister" class="com.nxin.framework.core.ZkServiceRegister" init-method="startUp" destroy-method="shutDown" p:namespace="job-center" p:servers="${dubbo.address}"/>
     <bean id="jobManager" class="com.nxin.framework.core.JobManager" init-method="startUp" destroy-method="shutDown" p:jobRepository-ref="jobRepository"/>
-    <bean id="codec" class="com.nxin.codec.KryoCodec" init-method="startUp">
+    <bean id="codec" class="com.nxin.framework.codec.KryoCodec" init-method="startUp">
         <property name="clss">
             <list value-type="java.lang.String">
                 <value>com.nxin.framework.domain.JobConfiguration</value>
@@ -46,7 +46,7 @@
     </bean>
     <bean id="jobShardingStrategy" class="com.nxin.framework.sharing.SequenceAllocationJobShardingStrategy"/>
     <bean id="rpcHelper" class="com.nxin.framework.core.JobRequestRpcHelper" init-method="startUp" destroy-method="shutDown"/>
-    <bean id="redisManager" class="com.nxin.cache.RedisManager">
+    <bean id="redisManager" class="com.nxin.framework.core.RedisManager">
         <property name="pool">
             <bean class="redis.clients.jedis.JedisPool">
                 <constructor-arg name="poolConfig">
@@ -61,7 +61,7 @@
             </bean>
         </property>
         <property name="resourceLoader">
-            <bean class="com.nxin.loader.ServletResourceLoader" init-method="init" p:root="/scripts/"/>
+            <bean class="com.nxin.framework.loader.ServletResourceLoader" init-method="init" p:root="/scripts/"/>
         </property>
     </bean>
 </beans>

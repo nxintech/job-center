@@ -466,7 +466,7 @@ const Job = connect((state)=>({editTaskVisible:state.jobInfo.jobEditing,editJob:
     })(job) && ((jb)=>{
       if(jb.consumerType)
       {
-        return jb.callbackUrl && urlReg.test(jb.callbackUrl);
+        return jb.notifyUrl && urlReg.test(jb.notifyUrl);
       };
       return true;
     })(job);
@@ -530,12 +530,12 @@ const Job = connect((state)=>({editTaskVisible:state.jobInfo.jobEditing,editJob:
             {this.props.selectedItems.length>0?([<Button onClick={this.deleteJobs.bind(this)}>删除任务</Button>,<Button>执行任务</Button>]):null}
           </div>
           <Table striped bordered hover>
-            <thead><tr><th></th><th>名称</th><th>执行表达式</th><th>是否分片</th><th>分片总数</th><th>通知类型</th><th>通知地址</th><th>描述</th><th>附加信息</th></tr></thead>
+            <thead><tr><th></th><th>名称</th><th>执行表达式</th><th>是否分片</th><th>分片总数</th><th>通知类型</th><th>通知地址</th><th>描述</th></tr></thead>
             <tbody>
               {
                 this.props.items.map(job=>
                 {
-                  return (<tr key={job.id}><td><input type="checkbox" data-id={job.id} onClick={(e)=>this.props.jobSellectionChanged(e.target.getAttribute("data-id"),e.target.checked)}/></td><td>{job.name}</td><td>{job.expression}</td><td>{job.needSharding?"是":"否"}</td><td>{job.shardingTotal}</td><td>{job.consumerType?(job.consumerType==1?"HTTP":"HTTPS"):"TCP"}</td><td>{job.callbackUrl}</td><td>{job.description}</td><td>{job.extra}</td></tr>);
+                  return (<tr key={job.id}><td><input type="checkbox" data-id={job.id} onClick={(e)=>this.props.jobSellectionChanged(e.target.getAttribute("data-id"),e.target.checked)}/></td><td>{job.name}</td><td>{job.expression}</td><td>{job.needSharding?"是":"否"}</td><td>{job.shardingTotal}</td><td>{job.consumerType?"TCP":"HTTP"}</td><td>{job.notifyUrl}</td><td>{job.description}</td></tr>);
                 })
               }
             </tbody>
@@ -555,9 +555,8 @@ const Job = connect((state)=>({editTaskVisible:state.jobInfo.jobEditing,editJob:
               <Input type="select" label="通知类型" value={this.props.editJob.consumerType} onChange={(e)=>this.props.editJobProperty("consumerType",parseInt(e.target.value))} labelClassName="col-xs-3" wrapperClassName="col-xs-9">
                 <option value="0">TCP</option>
                 <option value="1">HTTP</option>
-                <option value="2">HTTPS</option>
               </Input>
-              {this.props.editJob.consumerType!=0?<Input type="text" label="回调地址" value={this.props.editJob.callbackUrl} onChange={(e)=>this.props.editJobProperty("callbackUrl",e.target.value)} labelClassName="col-xs-3" wrapperClassName="col-xs-9"/>:null}
+              {this.props.editJob.consumerType==1?<Input type="text" label="回调地址" value={this.props.editJob.notifyUrl} onChange={(e)=>this.props.editJobProperty("notifyUrl",e.target.value)} labelClassName="col-xs-3" wrapperClassName="col-xs-9"/>:null}
               <Input type="textarea" label="任务描述" value={this.props.editJob.description} onChange={(e)=>this.props.editJobProperty("description",e.target.value)} labelClassName="col-xs-3" wrapperClassName="col-xs-9"/>
               <Input type="textarea" label="其它" value={this.props.editJob.extra} onChange={(e)=>this.props.editJobProperty("extra",e.target.value)} labelClassName="col-xs-3" wrapperClassName="col-xs-9"/>
             </form>
@@ -599,12 +598,12 @@ const JobInstance = connect((state)=>({search:state.jobInstance.search,items:sta
               let im=it.items[0];
               if(it.items.length>1)
               {
-                let fr=(<tr><td rowSpan={it.items.length} style={{verticalAlign:"middle"}}>{it.jobName}</td><td rowSpan={it.items.length} style={{verticalAlign:"middle"}}>{it.execTime}</td><td>{im.shardingItems=="all"?"末分片":im.shardingItems}</td><td>{im.status?(im.status==1?"成功":"出错"):"执行中"}</td><td>{im.error}</td></tr>);
-                return _.concat(fr, _.chain(it.items).tail().map((im)=>(<tr><td>{im.shardingItems=="all"?"末分片":im.shardingItems}</td><td>{im.status?(im.status==1?"成功":"出错"):"执行中"}</td><td>{im.error}</td></tr>)));
+                let fr=(<tr><td rowSpan={it.items.length} style={{verticalAlign:"middle"}}>{it.jobName}</td><td rowSpan={it.items.length} style={{verticalAlign:"middle"}}>{it.execTime}</td><td>{im.shardingItems}</td><td>{im.status?(im.status==1?"成功":"出错"):"执行中"}</td><td>{im.error}</td></tr>);
+                return _.concat(fr, _.chain(it.items).tail().map((im)=>(<tr><td>{im.shardingItems}</td><td>{im.status?(im.status==1?"成功":"出错"):"执行中"}</td><td>{im.error}</td></tr>)));
               }
               else
               {
-                return ([<tr><td>{it.jobName}</td><td>{it.execTime}</td><td>{im.shardingItems=="all"?"末分片":im.shardingItems}</td><td>{im.status?(im.status==1?"成功":"出错"):"执行中"}</td><td>{im.error}</td></tr>]);
+                return ([<tr><td>{it.jobName}</td><td>{it.execTime}</td><td>{im.shardingItems}</td><td>{im.status}</td><td>{im.error}</td></tr>]);
               };
             }).concat();
             return (<tbody>{ui}</tbody>);
