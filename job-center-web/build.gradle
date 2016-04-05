@@ -1,0 +1,14 @@
+apply plugin: 'war'
+apply plugin: 'jetty'
+
+dependencies {
+    compile project(':job-center-client')
+    compile group: 'org.aspectj', name: 'aspectjweaver', version:'1.8.7'
+    compile group: 'org.springframework', name: 'spring-webmvc', version:"$springVersion"
+    compile group: 'org.springframework', name: 'spring-oxm', version:"$springVersion"
+    providedCompile group: 'javax.servlet', name: 'javax.servlet-api', version:'3.1.0'
+}
+
+httpPort = 8080
+stopPort = 9451
+stopKey = 'foo'

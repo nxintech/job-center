@@ -1,0 +1,8 @@
+*.iml
+.gradle
+.idea
+out
+*/build
+*/target
+build
+src/frontend/node_modules
