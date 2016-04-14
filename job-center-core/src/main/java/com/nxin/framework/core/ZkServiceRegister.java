@@ -1,5 +1,6 @@
 package com.nxin.framework.core;
 
+import com.github.rholder.retry.*;
 import com.google.common.base.*;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -7,6 +8,7 @@ import com.google.common.util.concurrent.AbstractIdleService;
 import com.gs.collections.api.block.function.Function2;
 import com.gs.collections.impl.list.mutable.ListAdapter;
 import com.nxin.framework.domain.Tuple2;
+import com.nxin.framework.domain.Tuple3;
 import com.nxin.framework.functions.*;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -22,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.*;
 
 /**
  * Created by petzold on 2015/12/17.
@@ -36,6 +39,10 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     private int maxSleep = 800;
     private int sessionTimeOut = 600000;
     private int connectionTimeOut = 15000;
+    private Tuple3<Set<String>,String,Integer> jobWorkers;
+    private Tuple2<String,Integer> jobServer;
+    private ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+    Retryer<Boolean> retryer = RetryerBuilder.<Boolean>newBuilder().retryIfResult(Predicates.<Boolean>equalTo(false)).retryIfRuntimeException().withWaitStrategy(WaitStrategies.fixedWait(500, TimeUnit.MILLISECONDS)).withStopStrategy(StopStrategies.stopAfterAttempt(3)).build();
     private Logger logger = LoggerFactory.getLogger(ZkServiceRegister.class);
     protected void startUp() throws Exception
     {
@@ -82,82 +89,39 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     }
 
     @Override
-    public void registerJobWorkers(final Set<String> jobNames, final String ip, final int port)
+    public void registerJobWorkers(Set<String> jobNames, String ip, int port)
     {
-        final Action3<Set<String>,String,Integer> action = new Action3<Set<String>, String, Integer>()
+        jobWorkers = new Tuple3<Set<String>,String,Integer>(jobNames,ip,port);
+        String pt = String.valueOf(port);
+        for (String jobName : jobNames)
+        {
+            register("jobWorkers", ZKPaths.makePath(jobName, ip), pt);
+        }
+        framework.getConnectionStateListenable().addListener(new ConnectionStateListener3<Set<String>,String,String>(jobNames, ip, pt)
         {
             @Override
-            public void call(Set<String> jobNames, String ip, Integer port)
+            void stateChanged(CuratorFramework client, ConnectionState newState, Set<String> names, String ip, String port)
             {
-                try
+                for (String jobName : names)
                 {
-                    for (String name : jobNames)
-                    {
-                        String path = ZKPaths.makePath(name,ip);
-                        if(framework.usingNamespace("jobWorkers").checkExists().forPath(path) != null)
-                        {
-                            framework.usingNamespace("jobWorkers").setData().forPath(path, String.valueOf(port).getBytes(Charsets.UTF_8));
-                        }
-                        else
-                        {
-                            framework.usingNamespace("jobWorkers").create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(path,String.valueOf(port).getBytes(Charsets.UTF_8));
-                        }
-                    }
-                } catch (Exception e)
-                {
-                    logger.error(String.format("注册任务【%s】失败,IP【%s】",ip,port),e);
-                }
-            }
-        };
-        action.call(jobNames, ip, port);
-        framework.getConnectionStateListenable().addListener(new ConnectionStateListener()
-        {
-            @Override
-            public void stateChanged(CuratorFramework client, ConnectionState newState)
-            {
-                if (newState == ConnectionState.RECONNECTED)
-                {
-                    action.call(jobNames, ip, port);
+                    register("jobWorkers", ZKPaths.makePath(jobName, ip), port);
                 }
             }
         });
     }
 
     @Override
-    public void registerJobServer(final String ip, final Integer port)
+    public void registerJobServer(String ip, Integer port)
     {
-        final Action2<String,Integer> action = new Action2<String, Integer>()
+        jobServer = new Tuple2<String, Integer>(ip, port);
+        String pt = String.valueOf(port);
+        register("jobServers","/"+ip, pt);
+        framework.getConnectionStateListenable().addListener(new ConnectionStateListener3<String, String, String>("jobServers","/"+ip,pt)
         {
             @Override
-            public void call(String ip, Integer port)
+            void stateChanged(CuratorFramework client, ConnectionState newState, String nameSpace, String path, String port)
             {
-                try
-                {
-                    if(framework.usingNamespace("jobServers").checkExists().forPath("/"+ip) != null)
-                    {
-                        framework.usingNamespace("jobServers").setData().forPath("/"+ip,String.valueOf(port).getBytes(Charsets.UTF_8));
-                    }
-                    else
-                    {
-                        framework.usingNamespace("jobServers").create().withMode(CreateMode.EPHEMERAL).forPath("/"+ip,String.valueOf(port).getBytes(Charsets.UTF_8));
-                    }
-                }
-                catch (Exception e)
-                {
-                    logger.error("注册JobServer失败",e);
-                }
-            }
-        };
-        action.call(ip, port);
-        framework.getConnectionStateListenable().addListener(new ConnectionStateListener()
-        {
-            @Override
-            public void stateChanged(CuratorFramework client, ConnectionState newState)
-            {
-                if (newState == ConnectionState.RECONNECTED)
-                {
-                    action.call(ip, port);
-                }
+                register(nameSpace, path, port);
             }
         });
     }
@@ -271,12 +235,12 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     }
 
     @Override
-    public <T1,T2> void onReconnected(final Action3<CuratorFramework,T1,T2> action,final T1 t1,final T2 t2)
+    public <T1,T2> void onReconnected(Action3<CuratorFramework,T1,T2> action, T1 t1, T2 t2)
     {
-        framework.getConnectionStateListenable().addListener(new ConnectionStateListener()
+        framework.getConnectionStateListenable().addListener(new ConnectionStateListener3<Action3<CuratorFramework,T1,T2>,T1,T2>(action, t1, t2)
         {
             @Override
-            public void stateChanged(CuratorFramework client, ConnectionState newState)
+            void stateChanged(CuratorFramework client, ConnectionState newState, Action3<CuratorFramework, T1, T2> action, T1 t1, T2 t2)
             {
                 if (newState == ConnectionState.RECONNECTED)
                 {
@@ -290,9 +254,65 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     protected void shutDown() throws Exception
     {
         logger.info("Zookeeper注册中心开始停止");
+        executorService.shutdown();
         Thread.sleep(500L);
         CloseableUtils.closeQuietly(framework);
         logger.info("Zookeeper注册中心停止完毕");
+    }
+    private void register(String nameSpace, String path, String data)
+    {
+        executorService.submit(new Runnable3<String, String, String>(nameSpace, path, data)
+        {
+            @Override
+            void run(String nameSpace, String path, String data)
+            {
+                try
+                {
+                    retryer.call(new Callable3<String,String,byte[],Boolean>(nameSpace, path, data.getBytes(Charsets.UTF_8))
+                    {
+                        @Override
+                        Boolean call(String nameSpace, String path, byte[] data) throws Exception
+                        {
+                            if(framework.usingNamespace(nameSpace).checkExists().forPath(path) != null)
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                framework.usingNamespace(nameSpace).create().withMode(CreateMode.EPHEMERAL).forPath(path, data);
+                                Thread.sleep(500L);
+                                if(framework.usingNamespace(nameSpace).checkExists().forPath(path) != null)
+                                {
+                                    return true;
+                                }
+                                return false;
+                            }
+                        }
+                    });
+                } catch (ExecutionException e)
+                {
+                    logger.error("设置zk失败", e);
+                } catch (RetryException e)
+                {
+                    logger.error("重新尝试设置zk失败", e);
+                }
+            }
+        });
+    }
+    public void sync()
+    {
+        if(jobServer != null)
+        {
+            register("jobServers","/"+jobServer.getT1(),String.valueOf(jobServer.getT2()));
+        }
+        if(jobWorkers != null)
+        {
+            String port = String.valueOf(jobWorkers.getT3());
+            for (String name : jobWorkers.getT1())
+            {
+                register("jobWorkers", ZKPaths.makePath(name, jobWorkers.getT2()), port);
+            }
+        }
     }
 
     public void setServers(String servers)
@@ -328,5 +348,71 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     public void setConnectionTimeOut(int connectionTimeOut)
     {
         this.connectionTimeOut = connectionTimeOut;
+    }
+
+    private abstract class Callable3<T1,T2,T3,R> implements Callable<R>
+    {
+        private T1 t1;
+        private T2 t2;
+        private T3 t3;
+
+        public Callable3(T1 t1, T2 t2, T3 t3)
+        {
+            this.t1 = t1;
+            this.t2 = t2;
+            this.t3 = t3;
+        }
+
+        @Override
+        public R call() throws Exception
+        {
+            return call(t1, t2, t3);
+        }
+
+        abstract R call(T1 t1, T2 t2, T3 t3) throws Exception;
+    }
+
+    private abstract class Runnable3<T1,T2,T3> implements Runnable
+    {
+        private T1 t1;
+        private T2 t2;
+        private T3 t3;
+
+        public Runnable3(T1 t1, T2 t2, T3 t3)
+        {
+            this.t1 = t1;
+            this.t2 = t2;
+            this.t3 = t3;
+        }
+
+        @Override
+        public void run()
+        {
+            run(t1, t2, t3);
+        }
+
+        abstract void run(T1 t1, T2 t2, T3 t3);
+    }
+
+    private abstract class ConnectionStateListener3<T1, T2, T3> implements ConnectionStateListener
+    {
+        private T1 t1;
+        private T2 t2;
+        private T3 t3;
+
+        public ConnectionStateListener3(T1 t1, T2 t2, T3 t3)
+        {
+            this.t1 = t1;
+            this.t2 = t2;
+            this.t3 = t3;
+        }
+
+        @Override
+        public void stateChanged(CuratorFramework client, ConnectionState newState)
+        {
+            stateChanged(client, newState, t1, t2, t3);
+        }
+
+        abstract void stateChanged(CuratorFramework client, ConnectionState newState,T1 t1, T2 t2, T3 t3);
     }
 }

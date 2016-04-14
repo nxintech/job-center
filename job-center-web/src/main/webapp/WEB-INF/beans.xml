@@ -11,7 +11,7 @@
             </list>
         </property>
     </bean>
-    <bean class="com.nxin.framework.client.RpcJobWorker" init-method="startUp" destroy-method="shutDown">
+    <bean class="com.nxin.framework.client.RpcJobWorker" init-method="startUp" destroy-method="shutDown" p:port="${rpc.port}">
         <property name="jobWorker">
             <bean class="com.nxin.framework.client.JobWorker" init-method="startUp" destroy-method="shutDown" p:bufferSize="4" p:serviceRegister-ref="serviceRegister" p:port="${rpc.port}">
                 <property name="waitStrategy">

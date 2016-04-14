@@ -1,3 +1,8 @@
+apply plugin: 'maven'
+
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7
+
 dependencies {
     compile group: 'cglib', name: 'cglib', version: '3.1'
     compile group: 'com.alibaba', name: 'fastjson', version:"$fastjsonVersion"
@@ -9,4 +14,5 @@ dependencies {
     compile group: 'org.apache.curator', name: 'curator-recipes', version: "$curatorVersion"
     compile group: 'com.google.guava', name: 'guava', version: "$guavaVersion"
     compile group: 'com.goldmansachs', name: 'gs-collections', version: "$gsCollectionVersion"
+    compile group: 'com.github.rholder', name: 'guava-retrying', version: '2.0.0'
 }

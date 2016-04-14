@@ -5,6 +5,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
+import org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl;
 
 import javax.security.auth.login.CredentialException;
 

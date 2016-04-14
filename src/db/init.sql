@@ -41,6 +41,11 @@ CREATE TABLE nx_job_instance_item(
   error NVARCHAR(128) DEFAULT NULL
 ) CHARACTER SET utf8;
 
+CREATE TABLE nx_job_user(id INT PRIMARY KEY AUTO_INCREMENT,user_name NVARCHAR(50) UNIQUE NOT NULL,password NVARCHAR(50) NOT NULL,enabled BOOL NOT NULL) CHAR SET 'utf8';
+CREATE TABLE nx_job_user_group(id INT PRIMARY KEY AUTO_INCREMENT,group_name NVARCHAR(50) UNIQUE  NOT NULL) CHAR SET 'utf8';
+CREATE TABLE nx_job_group_authorities(id INT NOT NULL REFERENCES nx_job_user_group(id),authority NVARCHAR(50) NOT NULL) CHAR SET 'utf8';
+CREATE TABLE nx_job_group_members(id INT PRIMARY KEY AUTO_INCREMENT,group_id INT NOT NULL REFERENCES nx_job_user_group(id),user_id INT NOT NULL REFERENCES nx_job_user(id)) CHAR SET 'utf8';
+
 INSERT INTO nx_job_error_category(name) VALUES ('业务异常');
 INSERT INTO nx_job_error_category(name) VALUES ('程序异常');
 INSERT INTO nx_job_error(category, code, description) VALUES (1, 1000001, '任务名称已经存在');

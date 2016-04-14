@@ -70,4 +70,5 @@
     <mvc:resources mapping="/script/**" location="/resources/script/"/>
     <mvc:resources mapping="/css/**" location="/resources/css/"/>
     <mvc:resources mapping="/image/**" location="/resources/image/"/>
+    <mvc:resources mapping="/fonts/**" location="/resources/fonts/"/>
 </beans>
