@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:security="http://www.springframework.org/schema/security"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd">
+    <security:http pattern="/script/**" security="none"/>
+    <security:http pattern="/css/**" security="none"/>
+    <security:http pattern="/image/**" security="none"/>
+    <security:http pattern="/anymouns/**" security="none"/>
+    <security:http use-expressions="true">
+        <security:csrf disabled="true"/>
+        <security:intercept-url pattern="/login.html" access="permitAll"/>
+        <security:intercept-url pattern="/index.html" access="hasRole('ROLE_ADMIN')"/>
+        <security:intercept-url pattern="/home/**" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
+        <security:form-login login-page="/login.html" login-processing-url="/login" default-target-url="/index.html"/>
+        <security:logout logout-url="/logout" invalidate-session="true" delete-cookies="JSESSIONID" logout-success-url="/login.html"/>
+    </security:http>
+    <security:authentication-manager>
+        <security:authentication-provider>
+            <security:jdbc-user-service data-source-ref="dataSource" users-by-username-query="SELECT user_name AS username,password,enabled FROM nx_job_user WHERE user_name = ?;" authorities-by-username-query="SELECT user_name AS username,njga.authority FROM nx_job_user nju LEFT JOIN nx_job_group_members njgm ON nju.id = njgm.user_id LEFT JOIN nx_job_group_authorities njga ON njga.id = njgm.group_id WHERE nju.user_name = ?;"/>
+            <security:password-encoder ref="bcryptEncoder"/>
+        </security:authentication-provider>
+    </security:authentication-manager>
+    <bean id="bcryptEncoder" class="com.nxin.framework.codec.DefaultPasswordChecker"/>
+</beans>
