@@ -1,5 +1,8 @@
 apply plugin: 'maven'
 
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7
+
 dependencies {
     compile project(':job-center-core')
     compile group: 'com.lmax', name: 'disruptor', version: '3.3.4'

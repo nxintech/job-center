@@ -1,8 +1,9 @@
 allprojects{
     group 'com.nxin.framework'
-    version '1.0.0-SNAPSHOT'
+    version '1.0.3-SNAPSHOT'
     ext{
-        springVersion = '4.2.3.RELEASE'
+        springVersion = '4.2.5.RELEASE'
+        springSecurityVersion = '4.0.4.RELEASE'
         guavaVersion = '19.0'
         curatorVersion = '2.9.1'
         log4jVersion = '2.5'

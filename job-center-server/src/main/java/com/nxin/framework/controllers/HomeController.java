@@ -176,7 +176,6 @@ public class HomeController extends BaseController
             return PageResult.New("分页获取任务失败",2000001);
         }
     }
-
     @ResponseBody
     @RequestMapping(value = "/getJobInstanceByPage",method = RequestMethod.POST)
     public PageResult<JobInstanceInfo> getJobInstanceByPage(String name,int pageIndex,int pageSize)
@@ -189,22 +188,6 @@ public class HomeController extends BaseController
         {
             logger.error("获取实例列表失败");
             return PageResult.New("分页获取实例失败",2000001);
-        }
-    }
-    @ResponseBody
-    @RequestMapping(value = "/reportJob",method = RequestMethod.POST)
-    public ActionResult<Boolean> reportJob(String id,int state,String error)
-    {
-        try
-        {
-            logger.info("收到任务状态汇报【id:{}   state:{}   error:{}】",id,state,error);
-            jobRepository.updateItem(id,state,error);
-            return ActionResult.New(true);
-        }
-        catch (Exception e)
-        {
-            logger.error("更新任务执行状态失败",e);
-            return ActionResult.New(false);
         }
     }
     @Override
