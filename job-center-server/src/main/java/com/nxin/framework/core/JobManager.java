@@ -60,7 +60,7 @@ public class JobManager extends AbstractIdleService
     {
         try
         {
-            JobBuilder builder = JobBuilder.newJob(ElasticJob.class).storeDurably().withIdentity(configuration.getName()).usingJobData("id",configuration.getId()).usingJobData("name",configuration.getName());
+            JobBuilder builder = JobBuilder.newJob(ElasticJob.class).storeDurably();
             JobDetail jobDetail = initBuilder(builder, configuration).build();
             CronTrigger trigger = TriggerBuilder.newTrigger().withIdentity(configuration.getName()).withSchedule(CronScheduleBuilder.cronSchedule(configuration.getExpression())).build();
             scheduler.scheduleJob(jobDetail, trigger);
@@ -90,7 +90,7 @@ public class JobManager extends AbstractIdleService
 
     private JobBuilder initBuilder(JobBuilder builder, JobConfiguration configuration)
     {
-        builder.usingJobData("expression",configuration.getExpression()).usingJobData("needSharding",configuration.isNeedSharding());
+        builder.withIdentity(configuration.getName()).usingJobData("name",configuration.getName()).usingJobData("id",configuration.getId()).usingJobData("expression",configuration.getExpression()).usingJobData("needSharding",configuration.isNeedSharding());
         if(configuration.isNeedSharding())
         {
             builder.usingJobData("shardingTotal",configuration.getShardingTotal());
