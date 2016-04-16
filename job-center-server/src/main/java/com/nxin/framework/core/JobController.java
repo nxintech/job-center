@@ -55,10 +55,7 @@ public class JobController extends AbstractIdleService implements ApplicationCon
         message.setType(2);
         message.setMessageType(JobConfiguration.class.getName());
         message.setMessage(configuration);
-        for (Tuple2<String,Integer> tup : getOtherServers())
-        {
-            rpcHelper.send(tup.getT1(),tup.getT2(),message);
-        }
+        rpcHelper.sendAll(getOtherServers(), message);
         jobManager.registerJob(configuration);
         jobRepository.addJob(configuration);
         return 0;
@@ -83,10 +80,7 @@ public class JobController extends AbstractIdleService implements ApplicationCon
         message.setType(3);
         message.setMessageType(JobConfiguration.class.getName());
         message.setMessage(configuration);
-        for (Tuple2<String,Integer> tup : getOtherServers())
-        {
-            rpcHelper.send(tup.getT1(),tup.getT2(),message);
-        }
+        rpcHelper.sendAll(getOtherServers(), message);
         jobManager.updateJob(configuration);
     }
 
@@ -97,10 +91,7 @@ public class JobController extends AbstractIdleService implements ApplicationCon
         message.setType(4);
         message.setMessageType(String.class.getName());
         message.setMessage(name);
-        for (Tuple2<String,Integer> tup : getOtherServers())
-        {
-            rpcHelper.send(tup.getT1(),tup.getT2(),message);
-        }
+        rpcHelper.sendAll(getOtherServers(), message);
         jobManager.deleteJob(name);
     }
 
@@ -113,10 +104,7 @@ public class JobController extends AbstractIdleService implements ApplicationCon
         message.setType(5);
         message.setMessageType(ids.getClass().getName());
         message.setMessage(names);
-        for (Tuple2<String,Integer> tup : getOtherServers())
-        {
-            rpcHelper.send(tup.getT1(),tup.getT2(),message);
-        }
+        rpcHelper.sendAll(getOtherServers(), message);
         jobManager.deleteJobs(names);
     }
 

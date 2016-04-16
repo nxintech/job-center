@@ -6,6 +6,10 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.nxin.framework.domain.Tuple2;
+import com.nxin.framework.domain.Tuple3;
+import com.nxin.framework.domain.Tuple5;
+import com.nxin.framework.functions.Action2;
+import com.nxin.framework.functions.Action3;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -17,6 +21,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by petzold on 2015/12/18.
@@ -27,6 +33,9 @@ public abstract class RpcHelper<TR extends ChannelHandler> extends AbstractIdleS
     private EventLoopGroup workerGroup;
     private int connectionTimeOut = 15000;
     private Random random = new Random();
+    private int retryNum = 3;
+    private long sleepWaitTime = 500L;
+    private ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     private Logger logger = LoggerFactory.getLogger(RpcHelper.class);
     private LoadingCache<String,ChannelFuture> cache = CacheBuilder.newBuilder().softValues().build(new CacheLoader<String, ChannelFuture>()
     {
@@ -69,21 +78,31 @@ public abstract class RpcHelper<TR extends ChannelHandler> extends AbstractIdleS
 
     public <T> void send(String ip,int port,T data)
     {
-        logger.info("发送消息到【{}:{}】.内容【{}】成功", ip, port, JSON.toJSONString(data));
+        /*logger.info("发送消息到【{}:{}】.内容【{}】", ip, port, JSON.toJSONString(data));
         try
         {
-            final String key = String.format("%s:%d",ip,port);
+            String key = String.format("%s:%d",ip,port);
             ChannelFuture future = cache.get(key);
+            if(future == null)
+            {
+                logger.error("不能建立到{}:{}的连接",ip,port);
+                return;
+            }
             if(!future.channel().isOpen())
             {
                 cache.invalidate(key);
                 future = cache.get(key);
+                if(future == null || !future.channel().isOpen())
+                {
+                    logger.error("不能建立到{}:{}的连接",ip,port);
+                    return;
+                }
             }
             ChannelFuture cf = future.channel().writeAndFlush(data);
-            cf.addListener(new ChannelFutureListener()
+            cf.addListener(new FutureListener1<String>(key)
             {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception
+                void operationComplete(ChannelFuture future, String key) throws Exception
                 {
                     if(future.isSuccess())
                     {
@@ -105,28 +124,45 @@ public abstract class RpcHelper<TR extends ChannelHandler> extends AbstractIdleS
         catch (Exception e)
         {
             logger.error("发送消息失败",e);
-        }
+        }*/
+        logger.info("发送消息到【{}:{}】.内容【{}】", ip, port, JSON.toJSONString(data));
+        send(ip, port, data, retryNum, sleepWaitTime);
     }
 
-    public <T> void sendAny(final List<Tuple2<String,Integer>> servers,final T data)
+    public <T> void sendAny(List<Tuple2<String,Integer>> servers, T data)
     {
         if(servers == null || servers.isEmpty())
         {
-            logger.error("目的地不存在，消息将不会发送");
+            logger.error("目的地不存在或者没一台能够发送消息，消息将不会发送");
             return;
         }
-        logger.info("发送消息到【{}】.内容【{}】", JSON.toJSONString(servers), JSON.toJSONString(data));
-        final int rand = random.nextInt(servers.size());
-        Tuple2<String,Integer> tup = servers.get(rand);
+        logger.info("发送消息到【{}】任意一台.内容【{}】", JSON.toJSONString(servers), JSON.toJSONString(data));
+        int rand = random.nextInt(servers.size());
+        Tuple2<String,Integer> tup = servers.remove(rand);
         try
         {
-            final String key = String.format("%s:%d",tup.getT1(),tup.getT2());
+            String key = String.format("%s:%d", tup.getT1(), tup.getT2());
             ChannelFuture future = cache.get(key);
+            if(future == null)
+            {
+                sendAny(servers, data);
+                return;
+            }
+            if(!future.channel().isOpen())
+            {
+                cache.invalidate(key);
+                future = cache.get(key);
+                if(future == null || !future.channel().isOpen())
+                {
+                    sendAny(servers, data);
+                    return;
+                }
+            }
             ChannelFuture cf = future.channel().writeAndFlush(data);
-            cf.addListener(new ChannelFutureListener()
+            cf.addListener(new FutureListener1<Tuple3<String,List<Tuple2<String,Integer>>,T>>(new Tuple3<String, List<Tuple2<String, Integer>>, T>(key, servers, data))
             {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception
+                void operationComplete(ChannelFuture future, Tuple3<String, List<Tuple2<String, Integer>>, T> tup) throws Exception
                 {
                     if (future.isSuccess())
                     {
@@ -138,10 +174,16 @@ public abstract class RpcHelper<TR extends ChannelHandler> extends AbstractIdleS
                         {
                             future.channel().close();
                         }
-                        cache.invalidate(key);
-                        servers.remove(rand);
-                        sendAny(servers, data);
-                        logger.error("消息发送失败【{}】将重试另一台服务器", future.cause().getMessage());
+                        cache.invalidate(tup.getT1());
+                        if(!tup.getT2().isEmpty())
+                        {
+                            sendAny(tup.getT2(), tup.getT3());
+                            logger.error("消息发送失败【{}】将重试另一台服务器", future.cause().getMessage());
+                        }
+                        else
+                        {
+                            logger.error("无法将消息发送给任何一台服务器,异常:【{}】", future.cause().getMessage());
+                        }
                     }
                 }
             });
@@ -149,6 +191,7 @@ public abstract class RpcHelper<TR extends ChannelHandler> extends AbstractIdleS
         catch (Exception e)
         {
             logger.error("发送消息失败",e);
+            sendAny(servers, data);
         }
     }
 
@@ -156,18 +199,147 @@ public abstract class RpcHelper<TR extends ChannelHandler> extends AbstractIdleS
     {
         for (Tuple2<String,Integer> tup : servers)
         {
-            send(tup.getT1(),tup.getT2(),data);
+            executor.submit(new Runnable3<Tuple2<String,Integer>,T,Integer>(tup, data, retryNum)
+            {
+                @Override
+                void run(Tuple2<String, Integer> tup, T t, Integer retryNum)
+                {
+                    if(retryNum > 0)
+                    {
+                        send(tup.getT1(), tup.getT2(), t, retryNum, sleepWaitTime);
+                    }
+                }
+            });
         }
     }
 
+    private <T> void send(String host, int port, T data, int retryNum, long sleepTime)
+    {
+        try
+        {
+            String key = String.format("%s:%d", host, port);
+            ChannelFuture future = cache.get(key);
+            if(future == null)
+            {
+                Thread.sleep(sleepTime);
+                send(host, port, data, retryNum - 1, sleepTime);
+                return;
+            }
+            if(!future.channel().isOpen())
+            {
+                cache.invalidate(key);
+                future = cache.get(key);
+                if(future == null || !future.channel().isOpen())
+                {
+                    Thread.sleep(sleepTime);
+                    send(host, port, data, retryNum - 1, sleepTime);
+                    return;
+                }
+            }
+            ChannelFuture cf = future.channel().writeAndFlush(data);
+            cf.addListener(new FutureListener1<Tuple5<String,Integer,T,Integer,Long>>(new Tuple5<String, Integer, T, Integer, Long>(host, port, data, retryNum - 1,sleepTime))
+            {
+                @Override
+                void operationComplete(ChannelFuture future, Tuple5<String, Integer, T, Integer, Long> tup) throws Exception
+                {
+                    if (future.isSuccess())
+                    {
+                        logger.info("消息发送成功");
+                        return;
+                    } else
+                    {
+                        if (future.channel().isOpen())
+                        {
+                            future.channel().close();
+                        }
+                        cache.invalidate(tup.getT1());
+                        if(tup.getT4() > 0)
+                        {
+                            logger.error("消息发送失败【{}】将重试", future.cause().getMessage());
+                            send(tup.getT1(), tup.getT2(), tup.getT3(), tup.getT4(), tup.getT5());
+                        }
+                        else
+                        {
+                            logger.error("无法发送消息到{}:{}",tup.getT1(),tup.getT2());
+                        }
+                    }
+                }
+            });
+        }
+        catch (Exception e)
+        {
+            if(retryNum > 0)
+            {
+                logger.error(String.format("发送消息到%s:%d失败,将重试",host,port),e);
+                send(host, port, data, retryNum - 1, sleepTime);
+            }
+            else
+            {
+                logger.error(String.format("无法发送消息到%s:%d",host,port),e);
+            }
+        }
+    }
     @Override
     protected void shutDown() throws Exception
     {
+        logger.info("客户端开始停止");
+        executor.shutdown();
         workerGroup.shutdownGracefully();
+        logger.info("客户端停止完毕");
     }
 
     public void setConnectionTimeOut(int connectionTimeOut)
     {
         this.connectionTimeOut = connectionTimeOut;
+    }
+
+    public void setRetryNum(int retryNum)
+    {
+        this.retryNum = retryNum;
+    }
+
+    public void setSleepWaitTime(long sleepWaitTime)
+    {
+        this.sleepWaitTime = sleepWaitTime;
+    }
+
+    private abstract class FutureListener1<T> implements ChannelFutureListener
+    {
+        private T t;
+
+        public FutureListener1(T t)
+        {
+            this.t = t;
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception
+        {
+            operationComplete(future, t);
+        }
+
+        abstract void operationComplete(ChannelFuture future, T t) throws Exception;
+    }
+
+    private abstract class Runnable3<T1, T2, T3> implements Runnable
+    {
+        private T1 t1;
+        private T2 t2;
+        private T3 t3;
+
+        public Runnable3(T1 t1, T2 t2, T3 t3)
+        {
+            this.t1 = t1;
+            this.t2 = t2;
+            this.t3 = t3;
+        }
+
+        @Override
+        public void run()
+        {
+            run(t1, t2, t3);
+        }
+
+        abstract void run(T1 t1, T2 t2, T3 t3);
     }
 }
