@@ -8,10 +8,8 @@ import com.nxin.framework.domain.JobConfiguration;
 import com.nxin.framework.manager.IJobRepository;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
-import org.quartz.utils.Key;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.List;
 import java.util.Properties;
 
@@ -51,10 +49,7 @@ public class JobManager extends AbstractIdleService
         {
             logger.error("清理全部任务失败",e);
         }
-        for (JobConfiguration configuration : configurations)
-        {
-            registerJob(configuration);
-        }
+        configurations.forEach(this::registerJob);
     }
     public void registerJob(JobConfiguration configuration)
     {
@@ -130,18 +125,22 @@ public class JobManager extends AbstractIdleService
     {
         try
         {
-            scheduler.deleteJobs(Lists.transform(names, new Function<String, JobKey>()
-            {
-                @Override
-                public JobKey apply(String input)
-                {
-                    return new JobKey(input);
-                }
-            }));
+            scheduler.deleteJobs(Lists.transform(names, k -> new JobKey(k)));
         }
         catch (SchedulerException e)
         {
             logger.error("批量删除任务失败",e);
+        }
+    }
+
+    public void emptyJobs()
+    {
+        try
+        {
+            scheduler.clear();
+        } catch (SchedulerException e)
+        {
+            logger.error("清理全部任务失败",e);
         }
     }
 
@@ -168,10 +167,7 @@ public class JobManager extends AbstractIdleService
 
     public void runJobs(List<String> names)
     {
-        for (String name : names)
-        {
-            runJob(name);
-        }
+        names.forEach(this::runJob);
     }
 
     private void syncTime()

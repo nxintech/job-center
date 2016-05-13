@@ -1,8 +1,8 @@
 package com.nxin.framework.core;
 
+import com.nxin.framework.domain.ConnState;
 import com.nxin.framework.domain.Tuple2;
 import com.nxin.framework.functions.*;
-
 import java.util.List;
 import java.util.Set;
 
@@ -23,5 +23,6 @@ public interface IServiceRegister<T>
     void removeLeader(String name);
     List<Tuple2<String,Integer>> findJobServers();
     List<Tuple2<String,Integer>> findJobWorkers(String name);
-    <T1,T2> void onReconnected(Action3<T,T1,T2> action,T1 t1,T2 t2);
+    /*<T1,T2> void onReconnected(Action3<T,T1,T2> action,T1 t1,T2 t2);*/
+    void addListener(IStateListener<ConnState> listener);
 }

@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.gs.collections.api.block.function.Function2;
 import com.gs.collections.impl.list.mutable.ListAdapter;
+import com.nxin.framework.domain.ConnState;
 import com.nxin.framework.domain.Tuple2;
 import com.nxin.framework.domain.Tuple3;
 import com.nxin.framework.functions.*;
@@ -41,6 +42,7 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     private int connectionTimeOut = 15000;
     private Tuple3<Set<String>,String,Integer> jobWorkers;
     private Tuple2<String,Integer> jobServer;
+    private List<IStateListener<ConnState>> listeners = new ArrayList<>();
     private ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     Retryer<Boolean> retryer = RetryerBuilder.<Boolean>newBuilder().retryIfResult(Predicates.<Boolean>equalTo(false)).retryIfRuntimeException().withWaitStrategy(WaitStrategies.fixedWait(500, TimeUnit.MILLISECONDS)).withStopStrategy(StopStrategies.stopAfterAttempt(3)).build();
     private Logger logger = LoggerFactory.getLogger(ZkServiceRegister.class);
@@ -50,6 +52,46 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
         framework = CuratorFrameworkFactory.builder().connectString(servers).namespace(namespace).retryPolicy(new ExponentialBackoffRetry(minSleep,maxRetry,maxSleep)).sessionTimeoutMs(sessionTimeOut).connectionTimeoutMs(connectionTimeOut).build();
         framework.start();
         framework.blockUntilConnected();
+        framework.getConnectionStateListenable().addListener(new ConnectionStateListener()
+        {
+            @Override
+            public void stateChanged(CuratorFramework client, ConnectionState newState)
+            {
+                if(newState == ConnectionState.CONNECTED || newState == ConnectionState.RECONNECTED)
+                {
+                    sync();
+                }
+                ConnState state = getConnState(newState);
+                if(state != null)
+                {
+                    for (IStateListener<ConnState> listener : listeners)
+                    {
+                        listener.onStateChanged(state);
+                    }
+                }
+            }
+        });
+    }
+
+    private ConnState getConnState(ConnectionState connectionState)
+    {
+        ConnState connState;
+        switch (connectionState)
+        {
+            case CONNECTED:
+                connState = ConnState.CONNECTED;
+                break;
+            case LOST:
+                connState =  ConnState.LOST;
+                break;
+            case RECONNECTED:
+                connState =  ConnState.RECONNECTED;
+                break;
+            default:
+                connState = null;
+                break;
+        }
+        return connState;
     }
 
     @Override
@@ -91,39 +133,20 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     @Override
     public void registerJobWorkers(Set<String> jobNames, String ip, int port)
     {
-        jobWorkers = new Tuple3<Set<String>,String,Integer>(jobNames,ip,port);
+        jobWorkers = new Tuple3<>(jobNames, ip, port);
         String pt = String.valueOf(port);
         for (String jobName : jobNames)
         {
             register("jobWorkers", ZKPaths.makePath(jobName, ip), pt);
         }
-        framework.getConnectionStateListenable().addListener(new ConnectionStateListener3<Set<String>,String,String>(jobNames, ip, pt)
-        {
-            @Override
-            void stateChanged(CuratorFramework client, ConnectionState newState, Set<String> names, String ip, String port)
-            {
-                for (String jobName : names)
-                {
-                    register("jobWorkers", ZKPaths.makePath(jobName, ip), port);
-                }
-            }
-        });
     }
 
     @Override
     public void registerJobServer(String ip, Integer port)
     {
-        jobServer = new Tuple2<String, Integer>(ip, port);
+        jobServer = new Tuple2<>(ip, port);
         String pt = String.valueOf(port);
         register("jobServers","/"+ip, pt);
-        framework.getConnectionStateListenable().addListener(new ConnectionStateListener3<String, String, String>("jobServers","/"+ip,pt)
-        {
-            @Override
-            void stateChanged(CuratorFramework client, ConnectionState newState, String nameSpace, String path, String port)
-            {
-                register(nameSpace, path, port);
-            }
-        });
     }
 
     @Override
@@ -180,7 +203,7 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
             @Override
             public Tuple2<String, Integer> apply(Tuple2<String, String> tup)
             {
-                return new Tuple2<String, Integer>(tup.getT1(),Integer.parseInt(tup.getT2()));
+                return new Tuple2<>(tup.getT1(), Integer.parseInt(tup.getT2()));
             }
         });
     }
@@ -205,7 +228,7 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
                     try
                     {
                         String data = new String(curatorFramework.getData().forPath(p), Charsets.UTF_8);
-                        return new Tuple2<String, String>(s, data);
+                        return new Tuple2<>(s, data);
                     } catch (Exception e)
                     {
                         logger.error(String.format("读取节点【%s】信息失败", p, s), e);
@@ -229,31 +252,22 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
             @Override
             public Tuple2<String, Integer> valueOf(Tuple2<String, String> tup)
             {
-                return new Tuple2<String, Integer>(tup.getT1(), Integer.parseInt(tup.getT2()));
+                return new Tuple2<>(tup.getT1(), Integer.parseInt(tup.getT2()));
             }
         });
     }
 
     @Override
-    public <T1,T2> void onReconnected(Action3<CuratorFramework,T1,T2> action, T1 t1, T2 t2)
+    public void addListener(IStateListener<ConnState> listener)
     {
-        framework.getConnectionStateListenable().addListener(new ConnectionStateListener3<Action3<CuratorFramework,T1,T2>,T1,T2>(action, t1, t2)
-        {
-            @Override
-            void stateChanged(CuratorFramework client, ConnectionState newState, Action3<CuratorFramework, T1, T2> action, T1 t1, T2 t2)
-            {
-                if (newState == ConnectionState.RECONNECTED)
-                {
-                    action.call(client, t1, t2);
-                }
-            }
-        });
+        listeners.add(listener);
     }
 
     @Override
     protected void shutDown() throws Exception
     {
         logger.info("Zookeeper注册中心开始停止");
+        listeners.clear();
         executorService.shutdown();
         Thread.sleep(500L);
         CloseableUtils.closeQuietly(framework);
@@ -279,7 +293,7 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
                             }
                             else
                             {
-                                framework.usingNamespace(nameSpace).create().withMode(CreateMode.EPHEMERAL).forPath(path, data);
+                                framework.usingNamespace(nameSpace).create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(path, data);
                                 Thread.sleep(500L);
                                 if(framework.usingNamespace(nameSpace).checkExists().forPath(path) != null)
                                 {
@@ -308,9 +322,9 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
         if(jobWorkers != null)
         {
             String port = String.valueOf(jobWorkers.getT3());
-            for (String name : jobWorkers.getT1())
+            for (String jobName : jobWorkers.getT1())
             {
-                register("jobWorkers", ZKPaths.makePath(name, jobWorkers.getT2()), port);
+                register("jobWorkers", ZKPaths.makePath(jobName, jobWorkers.getT2()), port);
             }
         }
     }
@@ -392,27 +406,5 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
         }
 
         abstract void run(T1 t1, T2 t2, T3 t3);
-    }
-
-    private abstract class ConnectionStateListener3<T1, T2, T3> implements ConnectionStateListener
-    {
-        private T1 t1;
-        private T2 t2;
-        private T3 t3;
-
-        public ConnectionStateListener3(T1 t1, T2 t2, T3 t3)
-        {
-            this.t1 = t1;
-            this.t2 = t2;
-            this.t3 = t3;
-        }
-
-        @Override
-        public void stateChanged(CuratorFramework client, ConnectionState newState)
-        {
-            stateChanged(client, newState, t1, t2, t3);
-        }
-
-        abstract void stateChanged(CuratorFramework client, ConnectionState newState,T1 t1, T2 t2, T3 t3);
     }
 }

@@ -9,6 +9,7 @@ import com.ecwid.consul.v1.catalog.model.CatalogService;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.gs.collections.api.block.function.Function;
 import com.gs.collections.impl.list.mutable.ListAdapter;
+import com.nxin.framework.domain.ConnState;
 import com.nxin.framework.domain.Tuple2;
 import com.nxin.framework.functions.*;
 import java.util.List;
@@ -121,7 +122,7 @@ public class ConsulServiceRegister extends AbstractIdleService implements IServi
     }
 
     @Override
-    public <T1, T2> void onReconnected(Action3<ConsulClient, T1, T2> action, T1 t1, T2 t2)
+    public void addListener(IStateListener<ConnState> listener)
     {
 
     }
