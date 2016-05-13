@@ -1,8 +1,10 @@
 package com.nxin.framework.core;
 
+import com.alibaba.fastjson.JSON;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.gs.collections.impl.list.mutable.ListAdapter;
+import com.nxin.framework.domain.ConnState;
 import com.nxin.framework.domain.JobConfiguration;
 import com.nxin.framework.domain.JobInstanceItem;
 import com.nxin.framework.domain.Tuple2;
@@ -21,7 +23,7 @@ import java.util.List;
 /**
  * Created by petzold on 2015/12/28.
  */
-public class JobController extends AbstractIdleService implements ApplicationContextAware
+public class JobController extends AbstractIdleService implements IStateListener<ConnState>, ApplicationContextAware
 {
     private JobManager jobManager;
     private IJobRepository jobRepository;
@@ -35,14 +37,6 @@ public class JobController extends AbstractIdleService implements ApplicationCon
     {
         initIp();
         serviceRegister.registerJobServer(ip,port);
-        serviceRegister.onReconnected(new Action3<Object,JobManager,IJobRepository>()
-        {
-            @Override
-            public void call(Object o, JobManager manager,IJobRepository jobRepository)
-            {
-                manager.initJobs(jobRepository.getAllJobs());
-            }
-        }, jobManager, jobRepository);
     }
 
     public int newJob(JobConfiguration configuration)
@@ -55,7 +49,9 @@ public class JobController extends AbstractIdleService implements ApplicationCon
         message.setType(2);
         message.setMessageType(JobConfiguration.class.getName());
         message.setMessage(configuration);
-        rpcHelper.sendAll(getOtherServers(), message);
+        List<Tuple2<String,Integer>> servers = getOtherServers();
+        logger.info("发送新建任务消息[{}]给其它机器[{}]", JSON.toJSONString(message), JSON.toJSONString(servers));
+        rpcHelper.sendAll(servers, message);
         jobManager.registerJob(configuration);
         jobRepository.addJob(configuration);
         return 0;
@@ -80,7 +76,9 @@ public class JobController extends AbstractIdleService implements ApplicationCon
         message.setType(3);
         message.setMessageType(JobConfiguration.class.getName());
         message.setMessage(configuration);
-        rpcHelper.sendAll(getOtherServers(), message);
+        List<Tuple2<String,Integer>> servers = getOtherServers();
+        logger.info("发送更新任务配置消息[{}]给其它机器[{}]", JSON.toJSONString(message), JSON.toJSONString(servers));
+        rpcHelper.sendAll(servers, message);
         jobManager.updateJob(configuration);
     }
 
@@ -91,7 +89,9 @@ public class JobController extends AbstractIdleService implements ApplicationCon
         message.setType(4);
         message.setMessageType(String.class.getName());
         message.setMessage(name);
-        rpcHelper.sendAll(getOtherServers(), message);
+        List<Tuple2<String,Integer>> servers = getOtherServers();
+        logger.info("发送删除任务消息[{}]给其它机器[{}]", JSON.toJSONString(message), JSON.toJSONString(servers));
+        rpcHelper.sendAll(servers, message);
         jobManager.deleteJob(name);
     }
 
@@ -104,7 +104,9 @@ public class JobController extends AbstractIdleService implements ApplicationCon
         message.setType(5);
         message.setMessageType(ids.getClass().getName());
         message.setMessage(names);
-        rpcHelper.sendAll(getOtherServers(), message);
+        List<Tuple2<String,Integer>> servers = getOtherServers();
+        logger.info("发送删除任务消息[{}]给其它机器[{}]", JSON.toJSONString(message), JSON.toJSONString(servers));
+        rpcHelper.sendAll(servers, message);
         jobManager.deleteJobs(names);
     }
 
@@ -113,11 +115,13 @@ public class JobController extends AbstractIdleService implements ApplicationCon
         JobConfiguration configuration = jobRepository.getJob(id);
         deleteJob(configuration.getName());
     }
+
     private List<Tuple2<String,Integer>> getOtherServers()
     {
         List<Tuple2<String,Integer>> svs = serviceRegister.findJobServers();
         return ListAdapter.adapt(svs).rejectWith((tup, i) -> tup.getT1().equals(i), ip);
     }
+
     public void newJobInstance(String jobId, List<JobInstanceItem> items)
     {
         jobRepository.newInstance(jobId, items);
@@ -138,6 +142,20 @@ public class JobController extends AbstractIdleService implements ApplicationCon
             logger.error("初始化本机IP失败",e);
         }
     }
+
+    @Override
+    public void onStateChanged(ConnState state)
+    {
+        if(state == ConnState.LOST)
+        {
+            jobManager.emptyJobs();
+        }
+        else if(state == ConnState.RECONNECTED)
+        {
+            jobManager.initJobs(jobRepository.getAllJobs());
+        }
+    }
+
     @Override
     protected void shutDown() throws Exception
     {

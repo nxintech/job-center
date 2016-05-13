@@ -159,7 +159,7 @@ public abstract class RpcHelper<TR extends ChannelHandler> extends AbstractIdleS
                 }
             }
             ChannelFuture cf = future.channel().writeAndFlush(data);
-            cf.addListener(new FutureListener1<Tuple3<String,List<Tuple2<String,Integer>>,T>>(new Tuple3<String, List<Tuple2<String, Integer>>, T>(key, servers, data))
+            cf.addListener(new FutureListener1<Tuple3<String,List<Tuple2<String,Integer>>,T>>(new Tuple3<>(key, servers, data))
             {
                 @Override
                 void operationComplete(ChannelFuture future, Tuple3<String, List<Tuple2<String, Integer>>, T> tup) throws Exception
@@ -237,7 +237,7 @@ public abstract class RpcHelper<TR extends ChannelHandler> extends AbstractIdleS
                 }
             }
             ChannelFuture cf = future.channel().writeAndFlush(data);
-            cf.addListener(new FutureListener1<Tuple5<String,Integer,T,Integer,Long>>(new Tuple5<String, Integer, T, Integer, Long>(host, port, data, retryNum - 1,sleepTime))
+            cf.addListener(new FutureListener1<Tuple5<String,Integer,T,Integer,Long>>(new Tuple5<>(host, port, data, retryNum - 1, sleepTime))
             {
                 @Override
                 void operationComplete(ChannelFuture future, Tuple5<String, Integer, T, Integer, Long> tup) throws Exception
@@ -255,7 +255,7 @@ public abstract class RpcHelper<TR extends ChannelHandler> extends AbstractIdleS
                         cache.invalidate(tup.getT1());
                         if(tup.getT4() > 0)
                         {
-                            logger.error("消息发送失败【{}】将重试", future.cause().getMessage());
+                            logger.error(String.format("消息【{}】发送失败,将重试", JSON.toJSONString(tup.getT3())), future.cause());
                             send(tup.getT1(), tup.getT2(), tup.getT3(), tup.getT4(), tup.getT5());
                         }
                         else
@@ -270,7 +270,7 @@ public abstract class RpcHelper<TR extends ChannelHandler> extends AbstractIdleS
         {
             if(retryNum > 0)
             {
-                logger.error(String.format("发送消息到%s:%d失败,将重试",host,port),e);
+                logger.error(String.format("发送消息到%s:%d失败,将重试",host,port), e);
                 send(host, port, data, retryNum - 1, sleepTime);
             }
             else
