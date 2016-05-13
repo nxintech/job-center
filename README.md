@@ -86,3 +86,6 @@ public class HelloJob implements IJob
     | error           | 错误消息   | 异常信息记录      |
 
 ###### 注意：state目前设计了三种（0，1，2），初始化为0，即任务服务器提交任务请求给任务节点，1：任务执行成功。2：任务执行失败
+
+
+> 项目设计思路参考当当elastic-job https://github.com/dangdangdotcom/elastic-job
