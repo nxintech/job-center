@@ -89,8 +89,8 @@ public class HelloJob implements IJob
 ##### 4. 接下来我们登录任务中心来配置我们的任务，如下
 ![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/1.jpg)
 ###### 点击添加任务进入添加任务向导,相关示例图如下
-![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/2.jpg)
-![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/3.jpg)
-![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/4.jpg)
-![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/5.jpg)
+![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/2.png)
+![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/3.png)
+![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/4.png)
+![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/5.png)
      勾选分片时要求录入分片数量，协议使用http或https时要录入http任务的接口地址，任务中心会post数据到此地址来触发你本地的任务
