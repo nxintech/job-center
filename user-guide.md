@@ -87,10 +87,10 @@ public class HelloJob implements IJob
 ###### 4. 配置定时检查并修复配置的任务，有时候由于各种原因任务节点没有正确注册到服务注册中心，导致任务中心分配不到任务到此节点，在注册中心处新增一项属性配置syncPeriod，单位为豪秒，默认为3分钟，即每三分钟检查自身信息是否正确注册在服务注册中心
 ##### 至此，我们的客户端部分配置完成
 ##### 4. 接下来我们登录任务中心来配置我们的任务，如下
-![alt text](http://gitlab.dbn.cn/yiyoutao/job-center/raw/master/doc/images/1.jpg)
+![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/1.jpg)
 ###### 点击添加任务进入添加任务向导,相关示例图如下
-![alt text](http://gitlab.dbn.cn/yiyoutao/job-center/raw/master/doc/images/2.png)
-![alt text](http://gitlab.dbn.cn/yiyoutao/job-center/raw/master/doc/images/3.png)
-![alt text](http://gitlab.dbn.cn/yiyoutao/job-center/raw/master/doc/images/4.png)
-![alt text](http://gitlab.dbn.cn/yiyoutao/job-center/raw/master/doc/images/5.png)
+![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/2.jpg)
+![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/3.jpg)
+![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/4.jpg)
+![alt text](https://raw.githubusercontent.com/nxintech/job-center/master/doc/images/5.jpg)
      勾选分片时要求录入分片数量，协议使用http或https时要录入http任务的接口地址，任务中心会post数据到此地址来触发你本地的任务
