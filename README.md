@@ -1,9 +1,10 @@
 ### 分布式任务调度中心
  
 #### 服务器安装：
- 1. 安装前端依赖项，切换到src/frontend目录下执行npm install
- 2. 初始化数据库（mysql），如需要使用其它数据库，按照此脚本调整成相应数据库言及修改部分mybaits配置.初始化语句在src/db下
- 3. 在job-center-server上执行gradle prod war进行打包或交给jenkins自动处理
+ 1. 安装node，建议安装5.7版本以上
+ 2. 安装前端依赖项，切换到src/frontend目录下执行npm install
+ 3. 初始化数据库（mysql），如需要使用其它数据库，按照此脚本调整成相应数据库言及修改部分mybaits配置.初始化语句在src/db下
+ 4. 在job-center-server上执行gradle prod war进行打包或交给jenkins自动处理
  
 #### Java客户端使用：
  1. 向服务器上注册任务，如下
