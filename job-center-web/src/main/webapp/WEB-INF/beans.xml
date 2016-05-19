@@ -3,7 +3,7 @@
        xmlns:p="http://www.springframework.org/schema/p" xmlns:context="http://www.springframework.org/schema/context"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
     <context:property-placeholder location="WEB-INF/config.properties"/>
-    <bean id="serviceRegister" class="com.nxin.framework.core.ZkServiceRegister" init-method="startUp" destroy-method="shutDown" p:namespace="job-center" p:servers="${dubbo.address}"/>
+    <bean id="serviceRegister" class="com.nxin.framework.core.ZkServiceRegister" init-method="startUp" destroy-method="shutDown" p:namespace="job-center" p:servers="${zookeeper.address}"/>
     <bean id="codec" class="com.nxin.framework.codec.KryoCodec" init-method="startUp">
         <property name="clss">
             <list value-type="java.lang.String">
@@ -13,10 +13,7 @@
     </bean>
     <bean class="com.nxin.framework.client.RpcJobWorker" init-method="startUp" destroy-method="shutDown" p:port="${rpc.port}">
         <property name="jobWorker">
-            <bean class="com.nxin.framework.client.JobWorker" init-method="startUp" destroy-method="shutDown" p:bufferSize="4" p:serviceRegister-ref="serviceRegister" p:port="${rpc.port}">
-                <property name="waitStrategy">
-                    <bean class="com.lmax.disruptor.BlockingWaitStrategy"/>
-                </property>
+            <bean class="com.nxin.framework.client.JobWorker" init-method="startUp" destroy-method="shutDown" p:serviceRegister-ref="serviceRegister" p:port="${rpc.port}">
                 <property name="rpcHelper">
                     <bean class="com.nxin.framework.core.JobMessageRpcHelper" init-method="startUp" destroy-method="shutDown" p:codec-ref="codec"/>
                 </property>

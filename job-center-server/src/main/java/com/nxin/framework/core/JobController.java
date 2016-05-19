@@ -36,7 +36,8 @@ public class JobController extends AbstractIdleService implements IStateListener
     protected void startUp() throws Exception
     {
         initIp();
-        serviceRegister.registerJobServer(ip,port);
+        serviceRegister.registerJobServer(ip, port);
+        serviceRegister.addListener(this);
     }
 
     public int newJob(JobConfiguration configuration)
