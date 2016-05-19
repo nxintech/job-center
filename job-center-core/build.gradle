@@ -16,3 +16,13 @@ dependencies {
     compile group: 'com.goldmansachs', name: 'gs-collections', version: "$gsCollectionVersion"
     compile group: 'com.github.rholder', name: 'guava-retrying', version: '2.0.0'
 }
+uploadArchives {
+    repositories.mavenDeployer {
+        repository(url: "http://172.16.200.111:8081/nexus/content/repositories/snapshots") {
+            authentication(userName: "admin", password: "dbn002385")
+            pom.version = "$project.version"
+            pom.artifactId = "job-center-core"
+            pom.groupId = "$project.group"
+        }
+    }
+}

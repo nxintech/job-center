@@ -22,9 +22,8 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -40,6 +39,8 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     private int maxSleep = 800;
     private int sessionTimeOut = 600000;
     private int connectionTimeOut = 15000;
+    private long syncPeriod = 180000;
+    private Timer timer;
     private Tuple3<Set<String>,String,Integer> jobWorkers;
     private Tuple2<String,Integer> jobServer;
     private List<IStateListener<ConnState>> listeners = new ArrayList<>();
@@ -71,6 +72,15 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
                 }
             }
         });
+        timer = new Timer(true);
+        timer.schedule(new TimerTask()
+        {
+            @Override
+            public void run()
+            {
+                sync();
+            }
+        },syncPeriod,syncPeriod);
     }
 
     private ConnState getConnState(ConnectionState connectionState)
@@ -313,7 +323,7 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
             }
         });
     }
-    public void sync()
+    private void sync()
     {
         if(jobServer != null)
         {
@@ -362,6 +372,11 @@ public class ZkServiceRegister extends AbstractIdleService implements IServiceRe
     public void setConnectionTimeOut(int connectionTimeOut)
     {
         this.connectionTimeOut = connectionTimeOut;
+    }
+
+    public void setSyncPeriod(long syncPeriod)
+    {
+        this.syncPeriod = syncPeriod;
     }
 
     private abstract class Callable3<T1,T2,T3,R> implements Callable<R>

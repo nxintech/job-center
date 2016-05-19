@@ -4,7 +4,7 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
     <import resource="dataSource.xml"/>
     <import resource="spring-security.xml"/>
-    <bean id="serviceRegister" class="com.nxin.framework.core.ZkServiceRegister" init-method="startUp" destroy-method="shutDown" p:namespace="job-center" p:servers="${dubbo.address}"/>
+    <bean id="serviceRegister" class="com.nxin.framework.core.ZkServiceRegister" init-method="startUp" destroy-method="shutDown" p:namespace="job-center" p:servers="${zookeeper.address}"/>
     <bean id="jobManager" class="com.nxin.framework.core.JobManager" init-method="startUp" destroy-method="shutDown" p:jobRepository-ref="jobRepository"/>
     <bean id="codec" class="com.nxin.framework.codec.KryoCodec" init-method="startUp">
         <property name="clss">
@@ -65,8 +65,4 @@
             <bean class="com.nxin.framework.loader.ServletResourceLoader" init-method="init" p:root="/scripts/"/>
         </property>
     </bean>
-    <task:scheduler id="taskScheduler" pool-size="10"/>
-    <task:scheduled-tasks scheduler="taskScheduler">
-        <task:scheduled ref="serviceRegister" method="sync" cron="0 0/2 * * * ?"/>
-    </task:scheduled-tasks>
 </beans>

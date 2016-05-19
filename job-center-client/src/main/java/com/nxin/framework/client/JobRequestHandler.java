@@ -1,5 +1,6 @@
 package com.nxin.framework.client;
 
+import com.alibaba.fastjson.JSON;
 import com.nxin.framework.message.JobRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -21,6 +22,7 @@ public class JobRequestHandler extends SimpleChannelInboundHandler<JobRequest>
 
     protected void messageReceived(ChannelHandlerContext ctx, JobRequest msg) throws Exception
     {
+        logger.info("收到任务请求:{}", JSON.toJSONString(msg));
         worker.pushJob(msg);
     }
 

@@ -5,5 +5,14 @@ targetCompatibility = JavaVersion.VERSION_1_7
 
 dependencies {
     compile project(':job-center-core')
-    compile group: 'com.lmax', name: 'disruptor', version: '3.3.4'
+}
+uploadArchives {
+    repositories.mavenDeployer {
+        repository(url: "http://172.16.200.111:8081/nexus/content/repositories/snapshots") {
+            authentication(userName: "admin", password: "dbn002385")
+            pom.version = "$project.version"
+            pom.artifactId = "job-center-client"
+            pom.groupId = "$project.group"
+        }
+    }
 }
